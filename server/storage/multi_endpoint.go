@@ -52,19 +52,38 @@ func availableEndpointID(db interface {
 }
 
 func (s *SQLiteStorage) initMultiEndpoint() error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := ensureDeviceColumns(tx); err != nil {
+		return err
+	}
 	for _, q := range []string{
 		`CREATE TABLE IF NOT EXISTS push_groups(id INTEGER PRIMARY KEY AUTOINCREMENT,push_key TEXT UNIQUE NOT NULL)`,
 		`CREATE TABLE IF NOT EXISTS device_groups(device_id INTEGER PRIMARY KEY,group_id INTEGER NOT NULL)`,
 		`CREATE INDEX IF NOT EXISTS idx_device_group ON device_groups(group_id)`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_device_endpoint ON devices(endpoint_id)`,
 		`CREATE TABLE IF NOT EXISTS binding_requests(id TEXT PRIMARY KEY,pc_id INTEGER NOT NULL,mobile_id INTEGER NOT NULL,group_id INTEGER NOT NULL,credential_hash BLOB NOT NULL,code_hash BLOB NOT NULL,expires_at INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,consumed INTEGER NOT NULL DEFAULT 0,result_key TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL)`,
 		`CREATE INDEX IF NOT EXISTS idx_binding_request_created ON binding_requests(created_at)`,
 	} {
-		if _, err := s.db.Exec(q); err != nil {
+		if _, err := tx.Exec(q); err != nil {
 			return err
 		}
 	}
-	return nil
+	if err := backfillDeviceEndpoints(tx); err != nil {
+		return err
+	}
+	for _, q := range []string{
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_device_endpoint ON devices(endpoint_id)`,
+		`INSERT OR IGNORE INTO push_groups(push_key) SELECT device_key FROM devices WHERE id NOT IN (SELECT device_id FROM device_groups)`,
+		`INSERT OR IGNORE INTO device_groups(device_id,group_id) SELECT d.id,g.id FROM devices d JOIN push_groups g ON g.push_key=d.device_key`,
+	} {
+		if _, err := tx.Exec(q); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 func (s *SQLiteStorage) GetPushDevice(key string) (*model.Device, error) {
 	var ownKey string
