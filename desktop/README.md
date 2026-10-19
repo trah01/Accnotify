@@ -1,4 +1,6 @@
-# Accnotify 电脑端
+# Accnotify 电脑端（测试中）
+
+**电脑端目前处于测试阶段，暂非正式版。**
 
 基于 Tauri 2，支持 Windows 和 macOS，使用系统 WebView，不再附带 Chromium 和 Node.js。关闭窗口后继续在托盘接收消息，使用托盘菜单“退出”才能完全退出；开机启动需安装打包后的客户端。
 
@@ -46,7 +48,7 @@ npm run package:win
 
 macOS 默认使用本地 ad-hoc 签名的非公证 APP 和 DMG，Windows 生成 NSIS 安装包。建议分别在目标系统打包验证。构建产物位于 `desktop/src-tauri/target/release/bundle/`，不提交依赖或打包产物。
 
-版本唯一来源为根目录 `VERSION`。上述 npm 命令会先同步桌面版本；直接调用 Cargo 前，在项目根目录运行 `node scripts/sync-version.mjs`。不要独立修改 package.json、Cargo.toml 或 Tauri 配置中的版本。GitHub 版本标签发布和 PR 的 `build-test` 试构建流程见[项目说明](../README.md#客户端版本与自动打包)。CI 指定目标架构时，产物位于 `target/<目标架构>/release/bundle/`。
+版本唯一来源为根目录 `VERSION`。上述 npm 命令会先同步桌面版本；直接调用 Cargo 前，在项目根目录运行 `node scripts/sync-version.mjs`。不要独立修改 package.json、Cargo.toml 或 Tauri 配置中的版本。CI 指定目标架构时，产物位于 `target/<目标架构>/release/bundle/`。
 
 项目尚未上线，客户端按全新安装设计，不提供旧版本数据兼容或迁移。首次连接生成独立推送 ID，之后在本机正常保存身份、设置和历史。
 

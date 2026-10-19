@@ -14,33 +14,13 @@ Accnotify 是一款 Android 消息或者电脑消息推送的工具，可以把�
 4. 在首页复制“Push 链接”，供脚本或通知工具向这台手机发送消息；接入平台通知时复制“Webhook 链接”。
 5. 点击“学习怎么用”，选择示例并发送测试消息。
 
-#### 电脑端
+#### 电脑端（测试中）
+
+**电脑端目前处于测试阶段，暂非正式版。**
 
 支持 Windows 和 macOS，使用流程和手机差不多，可以独立接收，也可以和多台手机、电脑共用一个推送 ID。
 
 电脑端同样支持多服务器管理、公用 ID 与密钥、设备重置和注销、Markdown 消息、分组筛选、图片预览与保存、复制及清空历史，以及主题设置、使用教程和手动检查更新。图片直接分享取决于系统支持情况，桌面系统通知的图片与分组能力存在限制，详见 [电脑端说明](desktop/README.md)。
-
-## 客户端版本与自动打包
-
-所有客户端的版本统一由根目录 `VERSION` 控制，当前为 `0.2.1`。修改后在项目根目录运行 `node scripts/sync-version.mjs`，将桌面配置和锁文件一并同步；Android 直接读取 `VERSION`，版本码按 `major × 1000000 + minor × 1000 + patch` 生成。major 范围为 0–99，minor、patch 为 0–999，版本不能为 0.0.0。
-
-GitHub Actions 仅在以下情况构建：
-
-- 推送与 `VERSION` 一致的版本标签（例如 `v0.2.1`）：构建 Android APK、macOS Apple 芯片 / Intel DMG、Windows x64 安装包，全部成功后统一上传到对应 GitHub Release。不存在的 Release 会先创建草稿，上传完成后发布。
-- 给 PR 添加 `build-test` 标签：构建相同平台的测试包，下载入口位于该次 Actions 的 Artifacts，不创建 Release。Android 测试包为 debug 签名；需要重新构建时移除标签后重新添加。
-
-普通分支提交、普通 PR 更新不会触发构建；添加其他 PR 标签只会跳过任务。服务端 Docker 工作流也只在推送版本标签时运行。
-
-发布 Android 正式包前，在仓库 Settings → Secrets and variables → Actions 配置以下 Secrets；缺失时发布构建会停止，不使用临时签名替代：
-
-| Secret | 内容 |
-| --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | 发布 keystore 文件的 Base64 内容 |
-| `ANDROID_STORE_PASSWORD` | keystore 密码 |
-| `ANDROID_KEY_ALIAS` | 签名密钥别名 |
-| `ANDROID_KEY_PASSWORD` | 签名密钥密码 |
-
-保留同一套签名密钥以支持后续覆盖安装，不提交密钥文件。PR 测试不需要上述 Secrets。Release 上传使用 GitHub 自带的 `GITHUB_TOKEN`。macOS 包使用 ad-hoc 签名且不公证，Windows 包不附正式代码签名，首次打开可能需要系统手动允许。
 
 ## 安卓保活-后台接收消息
 
