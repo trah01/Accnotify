@@ -9,7 +9,6 @@ import android.content.IntentFilter
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -100,44 +99,54 @@ class HomeFragment : Fragment() {
             (activity as? MainActivity)?.saveAndRegister()
         }
 
-        binding.btnRefreshKey.setOnClickListener {
-            showCleanDialog(
-                title = "更换推送密钥",
-                message = "更换密钥后原有的推送链接将立即失效。\n\n注意：更换后必须点击上方的“注册设备 / 同步连接”按钮，否则无法接收新消息！",
-                positiveText = "我知道了，更换",
-                onPositive = {
-                    app.keyManager.regenerateDeviceKey()
-                    updateDeviceInfo()
-                    Toast.makeText(context, "密钥已更换，请点击注册按钮", Toast.LENGTH_LONG).show()
+        binding.tvDeviceKey.setOnClickListener {
+            val ctx = requireContext()
+            val server = app.keyManager.serverUrl
+            if (app.keyManager.getMemberCount() > 1 || app.keyManager.getPushKey() != app.keyManager.getDeviceKey()) {
+                Toast.makeText(ctx, "请先在设置中解除绑定，再切换设备 ID", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            DeviceIdSelector.show(ctx, binding.tvDeviceKey, app.keyManager) { changed ->
+                if (_binding != null) updateDeviceInfo()
+                if (changed && app.keyManager.serverUrl == server) {
+                    ctx.stopService(Intent(ctx, WebSocketService::class.java))
+                    updateConnectionStatus(false)
+                    Toast.makeText(ctx, "设备 ID 已更新，请同步连接并更新推送地址", Toast.LENGTH_LONG).show()
                 }
-            )
+            }
         }
 
-        // Reset Encryption moved to SettingsFragment
+        binding.btnSenderEncryption.setOnClickListener {
+            SenderEncryptionDialog.show(requireContext(), app.keyManager) {
+                if (_binding != null) updateDeviceInfo()
+                val ctx = context ?: return@show
+                if (app.keyManager.isRegistered && !app.keyManager.hasPendingReset(app.keyManager.serverUrl)) {
+                    try {
+                        ctx.stopService(Intent(ctx, WebSocketService::class.java))
+                        WebSocketService.start(ctx)
+                    } catch (e: Exception) {
+                        android.util.Log.e("HomeFragment", "Failed to reconnect after saving sender key", e)
+                        Toast.makeText(ctx, "密钥已保存，请点击同步连接重试", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
 
         binding.btnCopyPushUrl.setOnClickListener {
             val base = app.keyManager.serverUrl.trimEnd('/')
-            val key = app.keyManager.getDeviceKey() ?: return@setOnClickListener
+            val key = app.keyManager.getPushKey() ?: return@setOnClickListener
             val pushUrl = "$base/push/$key"
             val webhookUrl = "$base/webhook/$key"
 
             showCopyOptionsDialog(key, pushUrl, webhookUrl)
         }
 
-        binding.cardAccessibility.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
-
-        binding.cardAutoStart.setOnClickListener {
-            KeepAliveHelper.requestIgnoreBatteryOptimization(requireContext())
+        binding.cardKeepAliveSettings.setOnClickListener {
+            startActivity(Intent(requireContext(), KeepAliveSettingsActivity::class.java))
         }
 
         binding.cardNotificationPermission.setOnClickListener {
             KeepAliveHelper.openNotificationSettings(requireContext())
-        }
-
-        binding.cardAppSettings.setOnClickListener {
-            KeepAliveHelper.openAppSettings(requireContext())
         }
 
         binding.cardTutorial.setOnClickListener {
@@ -157,60 +166,72 @@ class HomeFragment : Fragment() {
         val density = resources.displayMetrics.density
         val container = android.widget.LinearLayout(requireContext()).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(0, (8 * density).toInt(), 0, 0)
         }
 
-        val options = listOf(
-            "Push 链接" to pushUrl,
-            "Webhook 链接" to webhookUrl,
-            "仅复制 Key" to key
-        )
+        val options = mutableListOf("Push 链接（全部设备）" to pushUrl)
+        app.keyManager.getEndpointId()?.let { options += "Push 链接（仅本机）" to "$pushUrl?target=$it" }
+        options += "Webhook 链接" to webhookUrl
+        options += "仅复制 Key" to key
 
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_clean, null)
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_copy_options, null)
+        (dialogView as com.google.android.material.card.MaterialCardView).apply {
+            minimumWidth = 0
+            setCardBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
+        }
         val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.dialogTitle)
-        val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.dialogMessage)
-        val btnPositive = dialogView.findViewById<android.widget.TextView>(R.id.btnPositive)
         val btnNegative = dialogView.findViewById<android.widget.TextView>(R.id.btnNegative)
         val customContainer = dialogView.findViewById<android.widget.FrameLayout>(R.id.dialogCustomContainer)
 
         tvTitle.text = "复制链接"
-        tvMessage.visibility = View.GONE
-        btnPositive.visibility = View.GONE
+        tvTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(R.dimen.text_dialog_title))
         btnNegative.text = "关闭"
+        btnNegative.visibility = View.VISIBLE
+        btnNegative.layoutParams.height = resources.getDimensionPixelSize(R.dimen.action_touch_size)
 
         val alertDialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setView(dialogView)
             .create()
-        alertDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        for ((label, value) in options) {
-            val item = android.widget.TextView(requireContext()).apply {
-                text = "$label\n$value"
-                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
-                setTextColor(resources.getColor(R.color.clean_text_primary, null))
-                setPadding(0, (12 * density).toInt(), 0, (12 * density).toInt())
-                setOnClickListener {
-                    copyToClipboard(label, value)
-                    alertDialog.dismiss()
-                }
-                background = requireContext().obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground)).run {
-                    val d = getDrawable(0); recycle(); d
-                }
+        for ((index, option) in options.withIndex()) {
+            val (label, value) = option
+            if (index > 0) {
+                container.addView(View(requireContext()).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (density + 0.5f).toInt())
+                    setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.clean_divider))
+                })
+            }
+            val item = LayoutInflater.from(requireContext()).inflate(R.layout.item_copy_option, container, false)
+            item.findViewById<android.widget.TextView>(R.id.optionTitle).text = label
+            item.findViewById<android.widget.TextView>(R.id.optionValue).text = value
+            item.contentDescription = "复制$label"
+            item.setOnClickListener {
+                copyToClipboard(label, value)
+                alertDialog.dismiss()
             }
             container.addView(item)
         }
 
-        customContainer.addView(container)
+        val scrollView = android.widget.ScrollView(requireContext()).apply {
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            addView(container)
+        }
+        customContainer.addView(scrollView)
         customContainer.visibility = View.VISIBLE
 
         btnNegative.setOnClickListener { alertDialog.dismiss() }
         alertDialog.show()
+        KeyDialogControls.compactWindow(requireContext(), alertDialog.window)
+        alertDialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+        }
     }
 
     private fun showPrivacyDialog() {
         val message = """
             1. 数据收集：Accnotify 不收集任何个人身份信息（如 IMEI、手机号等）。
-            2. 消息安全：所有推送消息均采用 RSA 端到端加密。服务器仅作为加密数据的搬运工，无法解密您的内容。
+            2. 消息安全：服务端接收消息明文，使用设备公钥加密后投递，客户端用本地私钥解密。服务端可以读取并保存消息内容，请使用您信任的服务端，并通过 HTTPS 发送请求。
             3. Push Key：它是您的唯一投递凭证，请妥善保管。一旦重置，旧链接将立即失效。
             4. 无障碍服务：本应用申请无障碍权限仅用于增强后台运行稳定性及自动处理通知，不读取您的私人数据。
             5. 免责声明：本软件为开源工具，请在中国法律允许范围内使用。
@@ -225,8 +246,24 @@ class HomeFragment : Fragment() {
 
     private fun updateDeviceInfo() {
         val keyManager = app.keyManager
-        binding.tvDeviceKey.text = keyManager.getDeviceKey() ?: "Unknown"
+        binding.tvDeviceKey.text = keyManager.getPushKey() ?: "未注册"
+        binding.tvDeviceKeyHint.text = if (keyManager.getMemberCount() > 1 || keyManager.getPushKey() != keyManager.getDeviceKey()) {
+            "共用 ID，切换前请在设置中解除绑定。"
+        } else "此 ID 用于接收推送消息，点击上方 ID 可切换。"
+        binding.tvEndpointId.text = keyManager.getEndpointId()?.let { "设备标识：$it" } ?: "同步连接后显示设备标识"
+        binding.tvEndpointId.setOnClickListener {
+            keyManager.getEndpointId()?.let { id ->
+                val clipboard = requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("设备标识", id))
+                Toast.makeText(requireContext(), "已复制设备标识", Toast.LENGTH_SHORT).show()
+            }
+        }
         binding.tvServerUrl.text = keyManager.serverUrl
+        binding.btnSenderEncryption.text = if (keyManager.getSenderEncryptionKey().isNullOrEmpty()) {
+            "发送端加密密钥 · 未配置"
+        } else {
+            "发送端加密密钥 · 已配置"
+        }
     }
 
     private fun updateConnectionStatus(connected: Boolean) {
@@ -320,6 +357,7 @@ class HomeFragment : Fragment() {
         }
 
         alertDialog.show()
+        KeyDialogControls.compactWindow(requireContext(), alertDialog.window)
     }
 }
 

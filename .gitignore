@@ -32,6 +32,14 @@ local.properties
 google-services.json
 .env
 .env.*
+!.env.example
+!.env.*.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.codex/
+.agents/
+.aws/
 
 # ============================================================
 # Keystore & Signing (never commit secrets)
@@ -40,6 +48,9 @@ google-services.json
 *.keystore
 *.pk8
 *.pem
+*.key
+*.p8
+*.mobileprovision
 secrets/
 
 # ============================================================
@@ -48,6 +59,15 @@ secrets/
 server/data/
 server/lspnotify-server
 server/accnotify-server
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3-shm
+*.sqlite3-wal
 
 # ============================================================
 # OS & Editor
@@ -71,3 +91,88 @@ Thumbs.db
 *.私人.md
 *_private.md
 docs/internal/
+docs/dev/
+docs/development/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# Local internal project documentation
+/项目内部文档.md
+
+# Additional build caches and local output
+.kotlin/
+.cxx/
+.externalNativeBuild/
+out/
+*.hprof
+*.heapdump
+
+# Local signing configuration and certificate bundles
+keystore.properties
+signing.properties
+*.p12
+*.pfx
+
+# Temporary editor files
+*.tmp
+*.temp
+*.swp
+*.swo
+.AppleDouble/
+
+# Temporary sender-side encryption test credentials
+/examples/send-encrypted.local.json
+
+# Local Python virtual environments and bytecode
+.venv/
+__pycache__/
+*.pyc
+
+# Desktop dependencies and packages
+/desktop/node_modules/
+/desktop/dist/
+/desktop/src-tauri/target/
+/desktop/src-tauri/gen/
+
+# Dependencies, tool caches and generated reports
+node_modules/
+target/
+dist/
+.wrangler/
+.cache/
+.pytest_cache/
+coverage/
+*.tsbuildinfo
+
+# Native and Go build output
+bin/
+obj/
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.pdb
+*.test
+/server/server
+
+# Local release packages (upload separately to GitHub Releases)
+/release-assets/
+*.dmg
+*.exe
+*.msi
+*.app/
+*.ipa
+*.pkg
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# GitHub branch excludes private Forgejo release files
+/.forgejo/
+/deploy/

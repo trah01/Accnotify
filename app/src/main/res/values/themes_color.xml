@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paired Material 3 accent roles. Night resources supply the dark scheme. -->
+    <style name="ThemeOverlay.White" parent="">
+        <item name="colorPrimary">@color/theme_white_primary</item>
+        <item name="colorOnPrimary">@color/theme_white_on_primary</item>
+        <item name="colorPrimaryContainer">@color/theme_white_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/theme_white_on_primary_container</item>
+        <item name="colorSecondary">@color/theme_white_secondary</item>
+        <item name="colorOnSecondary">@color/theme_white_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/theme_white_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/theme_white_on_secondary_container</item>
+        <item name="colorTertiary">@color/theme_white_tertiary</item>
+        <item name="colorOnTertiary">@color/theme_white_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/theme_white_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/theme_white_on_tertiary_container</item>
+        <item name="colorError">@color/theme_white_error</item>
+        <item name="colorOnError">@color/theme_white_on_error</item>
+        <item name="colorErrorContainer">@color/theme_white_error_container</item>
+        <item name="colorOnErrorContainer">@color/theme_white_on_error_container</item>
+        <item name="colorPrimaryInverse">@color/theme_white_inverse_primary</item>
+        <item name="colorControlHighlight">@color/theme_white_control_highlight</item>
+        <item name="colorAccent">@color/theme_white_primary</item>
+        <item name="colorControlActivated">@color/theme_white_primary</item>
+        <item name="android:colorAccent">@color/theme_white_primary</item>
+        <item name="messageDetailTitleColor">@color/theme_white_message_title</item>
+        <item name="android:colorBackground">@color/theme_white_background</item>
+        <item name="android:windowBackground">@color/theme_white_background</item>
+        <item name="android:statusBarColor">@color/theme_white_background</item>
+        <item name="android:navigationBarColor">@color/theme_white_background</item>
+        <item name="colorSurface">@color/theme_white_surface</item>
+        <item name="colorSurfaceVariant">@color/theme_white_surface</item>
+        <item name="colorSurfaceDim">@color/theme_white_surface</item>
+        <item name="colorSurfaceBright">@color/theme_white_surface</item>
+        <item name="colorSurfaceContainerLowest">@color/theme_white_surface</item>
+        <item name="colorSurfaceContainerLow">@color/theme_white_surface</item>
+        <item name="colorSurfaceContainer">@color/theme_white_surface</item>
+        <item name="colorSurfaceContainerHigh">@color/theme_white_surface</item>
+        <item name="colorSurfaceContainerHighest">@color/theme_white_surface</item>
+        <item name="elevationOverlayEnabled">false</item>
+        <item name="actionButtonBackgroundColor">@color/theme_white_surface</item>
+        <item name="actionButtonTextColor">?attr/colorOnSurface</item>
+        <item name="actionButtonStrokeColor">?attr/colorOutline</item>
+        <item name="inputBackgroundColor">@color/theme_white_surface</item>
+    </style>
+    <style name="ThemeOverlay.Blue" parent="">
+        <item name="colorPrimary">@color/theme_blue_primary</item>
+        <item name="colorOnPrimary">@color/theme_blue_on_primary</item>
+        <item name="colorPrimaryContainer">@color/theme_blue_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/theme_blue_on_primary_container</item>
+        <item name="colorSecondary">@color/theme_blue_secondary</item>
+        <item name="colorOnSecondary">@color/theme_blue_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/theme_blue_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/theme_blue_on_secondary_container</item>
+        <item name="colorTertiary">@color/theme_blue_tertiary</item>
+        <item name="colorOnTertiary">@color/theme_blue_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/theme_blue_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/theme_blue_on_tertiary_container</item>
+        <item name="colorError">@color/theme_blue_error</item>
+        <item name="colorOnError">@color/theme_blue_on_error</item>
+        <item name="colorErrorContainer">@color/theme_blue_error_container</item>
+        <item name="colorOnErrorContainer">@color/theme_blue_on_error_container</item>
+        <item name="colorPrimaryInverse">@color/theme_blue_inverse_primary</item>
+        <item name="colorControlHighlight">@color/theme_blue_control_highlight</item>
+        <item name="colorAccent">@color/theme_blue_primary</item>
+        <item name="colorControlActivated">@color/theme_blue_primary</item>
+        <item name="android:colorAccent">@color/theme_blue_primary</item>
+        <item name="messageDetailTitleColor">@color/theme_blue_message_title</item>
+    </style>
+    <style name="ThemeOverlay.Green" parent="">
+        <item name="colorPrimary">@color/theme_green_primary</item>
+        <item name="colorOnPrimary">@color/theme_green_on_primary</item>
+        <item name="colorPrimaryContainer">@color/theme_green_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/theme_green_on_primary_container</item>
+        <item name="colorSecondary">@color/theme_green_secondary</item>
+        <item name="colorOnSecondary">@color/theme_green_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/theme_green_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/theme_green_on_secondary_container</item>
+        <item name="colorTertiary">@color/theme_green_tertiary</item>
+        <item name="colorOnTertiary">@color/theme_green_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/theme_green_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/theme_green_on_tertiary_container</item>
+        <item name="colorError">@color/theme_green_error</item>
+        <item name="colorOnError">@color/theme_green_on_error</item>
+        <item name="colorErrorContainer">@color/theme_green_error_container</item>
+        <item name="colorOnErrorContainer">@color/theme_green_on_error_container</item>
+        <item name="colorPrimaryInverse">@color/theme_green_inverse_primary</item>
+        <item name="colorControlHighlight">@color/theme_green_control_highlight</item>
+        <item name="colorAccent">@color/theme_green_primary</item>
+        <item name="colorControlActivated">@color/theme_green_primary</item>
+        <item name="android:colorAccent">@color/theme_green_primary</item>
+        <item name="messageDetailTitleColor">@color/theme_green_message_title</item>
+    </style>
+    <style name="ThemeOverlay.Red" parent="">
+        <item name="colorPrimary">@color/theme_red_primary</item>
+        <item name="colorOnPrimary">@color/theme_red_on_primary</item>
+        <item name="colorPrimaryContainer">@color/theme_red_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/theme_red_on_primary_container</item>
+        <item name="colorSecondary">@color/theme_red_secondary</item>
+        <item name="colorOnSecondary">@color/theme_red_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/theme_red_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/theme_red_on_secondary_container</item>
+        <item name="colorTertiary">@color/theme_red_tertiary</item>
+        <item name="colorOnTertiary">@color/theme_red_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/theme_red_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/theme_red_on_tertiary_container</item>
+        <item name="colorError">@color/theme_red_error</item>
+        <item name="colorOnError">@color/theme_red_on_error</item>
+        <item name="colorErrorContainer">@color/theme_red_error_container</item>
+        <item name="colorOnErrorContainer">@color/theme_red_on_error_container</item>
+        <item name="colorPrimaryInverse">@color/theme_red_inverse_primary</item>
+        <item name="colorControlHighlight">@color/theme_red_control_highlight</item>
+        <item name="colorAccent">@color/theme_red_primary</item>
+        <item name="colorControlActivated">@color/theme_red_primary</item>
+        <item name="android:colorAccent">@color/theme_red_primary</item>
+        <item name="messageDetailTitleColor">@color/theme_red_message_title</item>
+    </style>
+    <style name="ThemeOverlay.Pink" parent="">
+        <item name="colorPrimary">@color/theme_pink_primary</item>
+        <item name="colorOnPrimary">@color/theme_pink_on_primary</item>
+        <item name="colorPrimaryContainer">@color/theme_pink_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/theme_pink_on_primary_container</item>
+        <item name="colorSecondary">@color/theme_pink_secondary</item>
+        <item name="colorOnSecondary">@color/theme_pink_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/theme_pink_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/theme_pink_on_secondary_container</item>
+        <item name="colorTertiary">@color/theme_pink_tertiary</item>
+        <item name="colorOnTertiary">@color/theme_pink_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/theme_pink_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/theme_pink_on_tertiary_container</item>
+        <item name="colorError">@color/theme_pink_error</item>
+        <item name="colorOnError">@color/theme_pink_on_error</item>
+        <item name="colorErrorContainer">@color/theme_pink_error_container</item>
+        <item name="colorOnErrorContainer">@color/theme_pink_on_error_container</item>
+        <item name="colorPrimaryInverse">@color/theme_pink_inverse_primary</item>
+        <item name="colorControlHighlight">@color/theme_pink_control_highlight</item>
+        <item name="colorAccent">@color/theme_pink_primary</item>
+        <item name="colorControlActivated">@color/theme_pink_primary</item>
+        <item name="android:colorAccent">@color/theme_pink_primary</item>
+        <item name="messageDetailTitleColor">@color/theme_pink_message_title</item>
+    </style>
+    <style name="ThemeOverlay.Black" parent="">
+        <item name="colorPrimary">@color/theme_black_primary</item>
+        <item name="colorOnPrimary">@color/theme_black_on_primary</item>
+        <item name="colorPrimaryContainer">@color/theme_black_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/theme_black_on_primary_container</item>
+        <item name="colorSecondary">@color/theme_black_secondary</item>
+        <item name="colorOnSecondary">@color/theme_black_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/theme_black_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/theme_black_on_secondary_container</item>
+        <item name="colorTertiary">@color/theme_black_tertiary</item>
+        <item name="colorOnTertiary">@color/theme_black_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/theme_black_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/theme_black_on_tertiary_container</item>
+        <item name="colorError">@color/theme_black_error</item>
+        <item name="colorOnError">@color/theme_black_on_error</item>
+        <item name="colorErrorContainer">@color/theme_black_error_container</item>
+        <item name="colorOnErrorContainer">@color/theme_black_on_error_container</item>
+        <item name="colorPrimaryInverse">@color/theme_black_inverse_primary</item>
+        <item name="colorControlHighlight">@color/theme_black_control_highlight</item>
+        <item name="colorAccent">@color/theme_black_primary</item>
+        <item name="colorControlActivated">@color/theme_black_primary</item>
+        <item name="android:colorAccent">@color/theme_black_primary</item>
+        <item name="messageDetailTitleColor">@color/theme_black_message_title</item>
+    </style>
+</resources>

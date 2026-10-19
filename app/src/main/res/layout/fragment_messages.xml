@@ -15,44 +15,77 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="48dp"
-            android:paddingBottom="16dp">
+            android:paddingHorizontal="@dimen/spacing_card"
+            android:paddingTop="@dimen/spacing_card"
+            android:paddingBottom="@dimen/spacing_control">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="历史消息"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="历史消息"
+                    android:textSize="@dimen/text_heading"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+
+                    android:paddingVertical="@dimen/control_padding_vertical"
+
+                    android:minHeight="@dimen/control_height"
+                    android:id="@+id/btnGroupFilter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxWidth="160dp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:paddingHorizontal="@dimen/spacing_control"
+                    android:text="全部分组"
+                    android:textSize="@dimen/text_control"
+                    android:textColor="?attr/colorPrimary"
+                    android:background="@drawable/bg_clean_input"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+            </LinearLayout>
 
             <!-- Search Bar -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:layout_marginTop="16dp"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/control_height"
+                android:layout_marginTop="@dimen/spacing_gap"
                 android:background="@drawable/bg_clean_input"
                 android:gravity="center_vertical"
-                android:paddingHorizontal="12dp">
+                android:paddingHorizontal="@dimen/spacing_control">
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="@dimen/icon_size"
+                    android:layout_height="@dimen/icon_size"
                     android:src="@drawable/ic_fluent_search"
                     app:tint="?attr/colorOnSurfaceVariant" />
 
                 <EditText
+
+                    android:minHeight="@dimen/control_height"
                     android:id="@+id/etSearch"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/spacing_small"
                     android:background="@android:color/transparent"
                     android:hint="搜索消息..."
                     android:textColorHint="?attr/colorOnSurfaceVariant"
                     android:textColor="?attr/colorOnSurface"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_control"
                     android:imeOptions="actionSearch"
                     android:inputType="text"
                     android:maxLines="1" />
@@ -88,7 +121,7 @@
                 android:layout_gravity="center"
                 android:text="暂无消息"
                 android:textColor="@color/clean_text_secondary"
-                android:textSize="16sp"
+                android:textSize="@dimen/text_option_title"
                 android:visibility="gone" />
 
         </FrameLayout>
@@ -101,9 +134,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:backgroundTint="@color/clean_primary"
-        app:tint="#FFFFFF"
+        android:layout_margin="@dimen/spacing_gap"
+        app:backgroundTint="?attr/colorPrimaryContainer"
+        app:tint="?attr/colorOnPrimaryContainer"
         android:contentDescription="清空历史"
         app:srcCompat="@drawable/ic_fluent_delete" />
 

@@ -11,12 +11,15 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.trah.accnotify.AccnotifyApp
 import com.trah.accnotify.R
 import com.trah.accnotify.databinding.ActivityMainBinding
 import com.trah.accnotify.service.WebSocketService
+import com.trah.accnotify.util.OfficialServerConsent
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,6 +33,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val app by lazy { AccnotifyApp.getInstance() }
+    private var officialConsentDialog: AlertDialog? = null
 
     private fun applyThemeColor() {
         val themeOverlay = when (app.keyManager.themeColor) {
@@ -39,7 +43,7 @@ class MainActivity : AppCompatActivity() {
             "pink" -> R.style.ThemeOverlay_Pink
             "white" -> R.style.ThemeOverlay_White
             "black" -> R.style.ThemeOverlay_Black
-            else -> R.style.ThemeOverlay_Blue
+            else -> R.style.ThemeOverlay_White
         }
         theme.applyStyle(themeOverlay, true)
     }
@@ -90,12 +94,21 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         outState.putInt(STATE_SELECTED_TAB, binding.bottomNavigation.selectedItemId)
     }
+
+    override fun onDestroy() {
+        officialConsentDialog?.dismiss()
+        super.onDestroy()
+    }
     
     private fun handleNotificationIntent(intent: Intent) {
         val openMessages = intent.getBooleanExtra("open_messages", false)
         val messageId = intent.getStringExtra("message_id")
         
         if (openMessages) {
+            if (intent.hasExtra("message_group")) {
+                messagesFragment.showGroupMessages(intent.getStringExtra("message_group"))
+                intent.removeExtra("message_group")
+            }
             // 切换到消息页面
             binding.bottomNavigation.post {
                 binding.bottomNavigation.selectedItemId = R.id.nav_messages
@@ -106,6 +119,8 @@ class MainActivity : AppCompatActivity() {
                 messagesFragment.showMessageById(messageId)
             }
             
+            com.trah.accnotify.util.NotificationHelper.refreshGroups(this)
+
             // 清除 intent extras 防止重复处理
             intent.removeExtra("open_messages")
             intent.removeExtra("message_id")
@@ -179,9 +194,50 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    fun openDeviceSettings() {
+        binding.bottomNavigation.selectedItemId = R.id.nav_settings
+    }
+
+    fun withServerConsent(serverUrl: String, onDeclined: () -> Unit = {}, onAccepted: () -> Unit) {
+        if (!OfficialServerConsent.isRequired(this, serverUrl)) {
+            onAccepted()
+            return
+        }
+        if (officialConsentDialog != null) return
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.official_server_disclaimer_title)
+            .setMessage(R.string.official_server_disclaimer_message)
+            .setPositiveButton(R.string.official_server_disclaimer_accept, null)
+            .setNegativeButton(R.string.official_server_disclaimer_decline) { _, _ -> onDeclined() }
+            .setCancelable(false)
+            .create()
+        officialConsentDialog = dialog
+        dialog.setOnDismissListener { officialConsentDialog = null }
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            if (OfficialServerConsent.accept(this)) {
+                dialog.dismiss()
+                onAccepted()
+            } else {
+                Toast.makeText(this, "确认未保存，请重试", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     fun saveAndRegister() {
         val keyManager = app.keyManager
         val serverUrl = keyManager.serverUrl.trimEnd('/')
+        if (OfficialServerConsent.isRequired(this, serverUrl)) {
+            withServerConsent(serverUrl) {
+                if (app.keyManager.serverUrl.trimEnd('/') == serverUrl) saveAndRegister()
+            }
+            return
+        }
+        if (keyManager.hasPendingReset(serverUrl)) {
+            Toast.makeText(this, "有尚未确认的重置操作，请在设置中重试该操作", Toast.LENGTH_LONG).show()
+            return
+        }
+        keyManager.ensureKeysExist(serverUrl)
 
         val deviceKey = keyManager.getDeviceKey()
         if (deviceKey == null) {
@@ -208,7 +264,8 @@ class MainActivity : AppCompatActivity() {
                 val requestBody = mapOf(
                     "device_key" to deviceKey,
                     "public_key" to publicKey,
-                    "name" to Build.MODEL
+                    "name" to Build.MODEL,
+                    "platform" to "mobile"
                 )
                 val gson = com.google.gson.Gson()
                 val json = gson.toJson(requestBody)
@@ -218,12 +275,16 @@ class MainActivity : AppCompatActivity() {
                     .build()
 
                 val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    try { com.trah.accnotify.crypto.DeviceBindingClient(keyManager).status(serverUrl) }
+                    catch (e: com.trah.accnotify.crypto.BindingException) { if (e.status != 404) throw e }
+                }
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
-                        keyManager.isRegistered = true
+                        keyManager.setRegistered(serverUrl, true)
                         Toast.makeText(this@MainActivity, "注册成功！", Toast.LENGTH_SHORT).show()
-                        restartWebSocketService()
+                        if (keyManager.serverUrl.trimEnd('/') == serverUrl) restartWebSocketService()
                     } else {
                         val errorBody = response.body?.string() ?: "未知错误"
                         Toast.makeText(this@MainActivity, "注册失败: ${response.code} - $errorBody", Toast.LENGTH_LONG).show()

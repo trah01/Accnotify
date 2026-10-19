@@ -1,5 +1,12 @@
 package com.trah.accnotify.ui
 
+import android.Manifest
+import android.app.NotificationManager
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
 import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
@@ -19,17 +26,29 @@ import com.trah.accnotify.BuildConfig
 import com.trah.accnotify.R
 import com.trah.accnotify.databinding.FragmentSettingsBinding
 import com.trah.accnotify.databinding.ItemServerBinding
+import com.google.android.material.color.MaterialColors
+import com.trah.accnotify.service.WebSocketService
+import com.trah.accnotify.crypto.DeviceManagementClient
+import com.trah.accnotify.util.UpdateChecker
+import com.trah.accnotify.util.KeepAliveHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 
 class SettingsFragment : Fragment() {
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
     private val app by lazy { AccnotifyApp.getInstance() }
+    private var deviceOperationInProgress = false
+    private val serviceNotificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (_binding != null) {
+            if (granted) enableForegroundNotification() else {
+                setForegroundNotificationSwitch(false)
+                Toast.makeText(context, "未允许通知权限，无法显示常驻通知", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
@@ -63,17 +82,18 @@ class SettingsFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                val latestVersion = fetchLatestVersion()
+                val update = UpdateChecker.check(Build.SUPPORTED_ABIS.toList())
+                val latestVersion = update.version
                 val currentVersion = BuildConfig.VERSION_NAME
 
                 withContext(Dispatchers.Main) {
                     binding.btnCheckUpdate.isEnabled = true
 
                     if (latestVersion != null) {
-                        if (compareVersions(latestVersion, currentVersion) > 0) {
+                        if (update.newerThan(currentVersion)) {
                             // New version available
                             binding.tvVersion.text = "发现新版本 $latestVersion"
-                            showUpdateDialog(latestVersion)
+                            showUpdateDialog(latestVersion, update.url)
                         } else {
                             // Up to date
                             binding.tvVersion.text = "已是最新版本 ($currentVersion)"
@@ -89,9 +109,9 @@ class SettingsFragment : Fragment() {
                         binding.tvVersion.text = originalText
                         showCleanDialog(
                             title = "检查更新",
-                            message = "检查更新失败，请稍后再试",
-                            positiveText = "好的",
-                            negativeText = null
+                            message = "暂未发布适用于这台手机的安装包，可前往发布页面查看。",
+                            positiveText = "发布页面",
+                            onPositive = { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(UpdateChecker.RELEASES_URL))) }
                         )
                     }
                 }
@@ -110,52 +130,13 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    private suspend fun fetchLatestVersion(): String? = withContext(Dispatchers.IO) {
-        try {
-            val url = URL("https://api.github.com/repos/trah01/Accnotify/releases/latest")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
-            connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-
-            val responseCode = connection.responseCode
-            if (responseCode == 200) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                // Parse tag_name from JSON response
-                val tagNameRegex = """"tag_name"\s*:\s*"([^"]+)"""".toRegex()
-                val match = tagNameRegex.find(response)
-                match?.groupValues?.get(1)?.removePrefix("v")
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    private fun compareVersions(version1: String, version2: String): Int {
-        val v1 = version1.split(".").map { it.toIntOrNull() ?: 0 }
-        val v2 = version2.split(".").map { it.toIntOrNull() ?: 0 }
-
-        val maxLength = maxOf(v1.size, v2.size)
-        for (i in 0 until maxLength) {
-            val num1 = v1.getOrElse(i) { 0 }
-            val num2 = v2.getOrElse(i) { 0 }
-            if (num1 > num2) return 1
-            if (num1 < num2) return -1
-        }
-        return 0
-    }
-
-    private fun showUpdateDialog(latestVersion: String) {
+    private fun showUpdateDialog(latestVersion: String, releaseURL: String) {
         showCleanDialog(
             title = "发现新版本",
             message = "当前版本: ${BuildConfig.VERSION_NAME}\n最新版本: $latestVersion\n\n是否前往 GitHub 下载？",
             positiveText = "前往下载",
             onPositive = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/trah01/Accnotify/releases"))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(releaseURL))
                 startActivity(intent)
             }
         )
@@ -174,22 +155,25 @@ class SettingsFragment : Fragment() {
             if (url == currentUrl) {
                 itemBinding.ivSelected.visibility = View.VISIBLE
                 itemBinding.ivSelected.setImageResource(R.drawable.ic_fluent_globe)
-                itemBinding.tvServerUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.clean_primary))
+                itemBinding.tvServerUrl.setTextColor(MaterialColors.getColor(itemBinding.root, com.google.android.material.R.attr.colorPrimary))
                 itemBinding.tvServerUrl.setTypeface(null, android.graphics.Typeface.BOLD)
             } else {
                 itemBinding.ivSelected.visibility = View.INVISIBLE
-                itemBinding.tvServerUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.clean_text_primary))
+                itemBinding.tvServerUrl.setTextColor(MaterialColors.getColor(itemBinding.root, com.google.android.material.R.attr.colorOnSurface))
                 itemBinding.tvServerUrl.setTypeface(null, android.graphics.Typeface.NORMAL)
             }
 
             // Click to select
             itemBinding.root.setOnClickListener {
                 if (!isAdded) return@setOnClickListener
-                keyManager.serverUrl = url
-                Toast.makeText(context, "已切换服务器", Toast.LENGTH_SHORT).show()
-                setupServerList() // Refresh UI
-                // Restart WebSocket service to connect to new server (delay to let UI settle)
-                view?.postDelayed({ restartWebSocketService() }, 300)
+                (activity as? MainActivity)?.withServerConsent(url) {
+                    if (isAdded) {
+                        keyManager.serverUrl = url
+                        Toast.makeText(context, "已切换服务器", Toast.LENGTH_SHORT).show()
+                        setupServerList()
+                        view?.postDelayed({ restartWebSocketService() }, 300)
+                    }
+                }
             }
 
             // Edit
@@ -199,13 +183,27 @@ class SettingsFragment : Fragment() {
 
             // Delete
             itemBinding.btnDelete.setOnClickListener {
+                if (keyManager.getServers().size <= 1) {
+                    Toast.makeText(context, "至少保留一个服务器", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
                 showCleanDialog(
                     title = "删除服务器",
                     message = "确定要删除 $url 吗？",
                     positiveText = "删除",
                     onPositive = {
-                        keyManager.removeServer(url)
-                        setupServerList()
+                        try {
+                            val wasSelected = keyManager.serverUrl == url
+                            if (keyManager.removeServer(url)) {
+                                setupServerList()
+                                if (wasSelected) restartWebSocketService()
+                                Toast.makeText(context, "服务器已删除", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "至少保留一个服务器", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "服务器删除失败，请重试", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 )
             }
@@ -219,48 +217,99 @@ class SettingsFragment : Fragment() {
         et.setText(currentUrl)
         et.setSelection(currentUrl.length)
         et.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_clean_input)
-        et.setPadding(32, 32, 32, 32)
+        resources.getDimensionPixelSize(R.dimen.spacing_control).let { padding -> et.setPadding(padding, padding, padding, padding) }
+        val reuseKey = com.google.android.material.checkbox.MaterialCheckBox(requireContext()).apply {
+            text = "复用公用秘钥"
+            isChecked = app.keyManager.isUsingCommonSenderKey(currentUrl)
+        }
+        val reuseId = com.google.android.material.checkbox.MaterialCheckBox(requireContext()).apply {
+            text = "复用公用 ID"
+            isChecked = app.keyManager.isUsingCommonDeviceId(currentUrl)
+        }
+        val content = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            addView(et)
+            addView(reuseKey)
+            addView(reuseId)
+        }
 
         showCleanDialog(
             title = "编辑服务器地址",
-            message = "请输入新的服务器地址：",
+            message = "ID 和密钥按服务器分别保存，可选择复用本机的公用值。更换设备 ID 后，请在首页同步连接并更新发送脚本的推送地址。",
             positiveText = "保存",
-            customView = et,
+            customView = content,
             onPositive = {
                 val newUrl = et.text.toString().trim().trimEnd('/')
-                if (newUrl.isNotEmpty() && newUrl != currentUrl) {
+                if (newUrl.isNotEmpty()) {
                     val keyManager = app.keyManager
-                    // Remove old URL and add new one
-                    keyManager.removeServer(currentUrl)
-                    keyManager.addServer(newUrl)
-                    // If the edited URL was the current one, switch to new URL
-                    if (keyManager.serverUrl == currentUrl) {
-                        keyManager.serverUrl = newUrl
+                    val wasSelected = keyManager.serverUrl == currentUrl
+                    val updateServer = updateServer@{
+                        if (isAdded) {
+                            try {
+                                keyManager.updateServerAddress(currentUrl, newUrl, reuseKey.isChecked, reuseId.isChecked)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, e.message ?: "服务器配置保存失败，请重试", Toast.LENGTH_SHORT).show()
+                                return@updateServer
+                            }
+                            setupServerList()
+                            if (wasSelected) restartWebSocketService()
+                            val needsSync = keyManager.serverUrl == newUrl && !keyManager.isRegistered
+                            Toast.makeText(context, if (needsSync) "已保存，请在首页同步连接" else "服务器配置已保存", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                    setupServerList()
-                    Toast.makeText(context, "服务器地址已更新", Toast.LENGTH_SHORT).show()
+                    if (wasSelected) {
+                        (activity as? MainActivity)?.withServerConsent(newUrl, onAccepted = updateServer)
+                    } else {
+                        updateServer()
+                    }
                 }
             }
         )
     }
 
     private fun setupActions() {
+        binding.btnNotificationRules.setOnClickListener { startActivity(Intent(requireContext(), NotificationRulesActivity::class.java)) }
+        binding.btnBindIdentity.setOnClickListener { DeviceBindingDialog.show(this) }
+        binding.btnBoundDevices.setOnClickListener { BoundDevicesDialog.show(this) }
+        binding.btnCommonInfo.setOnClickListener {
+            CommonInfoDialog.show(requireContext(), app.keyManager) { restartWebSocketService() }
+        }
+
         binding.btnAddServer.setOnClickListener {
             val et = EditText(requireContext())
             et.setHint("https://xx.com")
             et.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_clean_input)
-            et.setPadding(32, 32, 32, 32)
+            resources.getDimensionPixelSize(R.dimen.spacing_control).let { padding -> et.setPadding(padding, padding, padding, padding) }
+            val reuseKey = com.google.android.material.checkbox.MaterialCheckBox(requireContext()).apply {
+                text = "复用公用秘钥"
+                isChecked = false
+            }
+            val reuseId = com.google.android.material.checkbox.MaterialCheckBox(requireContext()).apply {
+                text = "复用公用 ID"
+                isChecked = false
+            }
+            val content = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                addView(et)
+                addView(reuseKey)
+                addView(reuseId)
+            }
 
             showCleanDialog(
                 title = "添加服务器",
                 message = "请输入服务器地址：",
                 positiveText = "添加",
-                customView = et,
+                customView = content,
                 onPositive = {
                     val newUrl = et.text.toString().trim().trimEnd('/')
                     if (newUrl.isNotEmpty()) {
-                        app.keyManager.addServer(newUrl)
-                        setupServerList()
+                        try {
+                            app.keyManager.addServer(newUrl, reuseKey.isChecked, reuseId.isChecked)
+                            setupServerList()
+                            if (app.keyManager.serverUrl == newUrl) restartWebSocketService()
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "服务器保存失败，请重试", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             )
@@ -271,26 +320,139 @@ class SettingsFragment : Fragment() {
             startActivity(intent)
         }
 
-        binding.btnResetEncryption.setOnClickListener {
-            showCleanDialog(
-                title = "重置加密密钥",
-                message = "这将生成全新的 E2E 公私钥对。\n\n旧消息将无法解密。重置后必须点击首页的\"同步服务器\"。",
-                positiveText = "重置",
-                onPositive = {
-                    app.keyManager.regenerateAllKeys()
-                    Toast.makeText(context, "密钥已重置，请务必同步服务器", Toast.LENGTH_LONG).show()
+        binding.btnResetEncryption.setOnClickListener { confirmDeviceOperation("reset_rsa") }
+        binding.btnResetDeviceAndEncryption.setOnClickListener { confirmDeviceOperation("reset_all") }
+        binding.btnUnregisterDevice.setOnClickListener { confirmDeviceOperation("unregister") }
+    }
+
+    private fun confirmDeviceOperation(action: String) {
+        if (deviceOperationInProgress) return
+        if (com.trah.accnotify.util.OfficialServerConsent.isRequired(requireContext(), app.keyManager.serverUrl)) {
+            (activity as? MainActivity)?.withServerConsent(app.keyManager.serverUrl) {
+                if (isAdded) confirmDeviceOperation(action)
+            }
+            return
+        }
+        if (!app.keyManager.isRegistered) {
+            Toast.makeText(context, "请先在首页同步当前服务器", Toast.LENGTH_LONG).show()
+            return
+        }
+        val server = app.keyManager.serverUrl
+        val title = when (action) {
+            "reset_rsa" -> "仅重置 RSA 密钥"
+            "reset_all" -> "重置设备 ID 和 RSA 密钥"
+            else -> "注销设备 ID 和服务端公钥"
+        }
+        val effect = when (action) {
+            "reset_rsa" -> "保留设备 ID 和推送地址，自动同步新公钥。本地历史保留。"
+            "reset_all" -> "旧推送地址将失效，自动同步新的设备 ID 和公钥。本地历史保留。"
+            else -> "删除此服务器上的设备注册、公钥及消息，旧推送地址失效。本地私钥和历史保留，再次同步时使用新的设备 ID。"
+        }
+        showCleanDialog(title = title, message = "服务器：$server\n\n$effect", positiveText = if (action == "unregister") "注销" else "重置", onPositive = {
+            performDeviceOperation(server, action)
+        })
+    }
+
+    private fun setDeviceOperationBusy(busy: Boolean) {
+        deviceOperationInProgress = busy
+        val currentBinding = _binding ?: return
+        for (button in listOf(currentBinding.btnResetEncryption, currentBinding.btnResetDeviceAndEncryption,
+            currentBinding.btnUnregisterDevice, currentBinding.btnAddServer)) button.isEnabled = !busy
+        fun enableTree(view: View) {
+            view.isEnabled = !busy
+            if (view is ViewGroup) for (i in 0 until view.childCount) enableTree(view.getChildAt(i))
+        }
+        enableTree(currentBinding.serverListContainer)
+    }
+
+    private fun performDeviceOperation(server: String, action: String) {
+        setDeviceOperationBusy(true)
+        val ctx = requireContext().applicationContext
+        if (app.keyManager.serverUrl == server) ctx.stopService(Intent(ctx, WebSocketService::class.java))
+        Toast.makeText(ctx, "正在处理，请稍候", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            try {
+                DeviceManagementClient(app.keyManager).execute(server, action)
+                if (app.keyManager.serverUrl == server && action != "unregister") {
+                    try { WebSocketService.start(ctx) } catch (e: Exception) {
+                        android.util.Log.e("SettingsFragment", "Device updated but connection restart failed", e)
+                    }
                 }
-            )
+                if (_binding != null) {
+                    setupServerList()
+                    Toast.makeText(ctx, if (action == "unregister") "已注销当前服务器的设备" else "已重置并同步当前服务器", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                if (isAdded) Toast.makeText(ctx, e.message ?: "操作结果未确认，请重试同一操作", Toast.LENGTH_LONG).show()
+            } finally {
+                setDeviceOperationBusy(false)
+            }
         }
     }
 
     private fun setupForegroundNotificationSwitch() {
-        val keyManager = app.keyManager
-        binding.switchForegroundNotification.isChecked = keyManager.showForegroundNotification
+        binding.switchForegroundNotification.setOnCheckedChangeListener(null)
+        binding.switchForegroundNotification.isChecked = app.keyManager.showForegroundNotification
         binding.switchForegroundNotification.setOnCheckedChangeListener { _, isChecked ->
-            keyManager.showForegroundNotification = isChecked
-            // Restart service so it picks up the new setting immediately
-            view?.postDelayed({ restartWebSocketService() }, 200)
+            if (isChecked) {
+                enableForegroundNotification()
+            } else {
+                applyForegroundNotificationSetting(false)
+            }
+        }
+    }
+
+    private fun setForegroundNotificationSwitch(enabled: Boolean) {
+        app.keyManager.showForegroundNotification = enabled
+        _binding?.let {
+            it.switchForegroundNotification.setOnCheckedChangeListener(null)
+            it.switchForegroundNotification.isChecked = enabled
+            setupForegroundNotificationSwitch()
+        }
+    }
+
+    private fun enableForegroundNotification() {
+        val ctx = context ?: return
+        val keys = app.keyManager
+        if (!keys.isRegistered || keys.hasPendingReset(keys.serverUrl)) {
+            setForegroundNotificationSwitch(false)
+            Toast.makeText(ctx, if (keys.hasPendingReset(keys.serverUrl)) "请先完成待确认的重置操作" else "请先在首页同步当前服务器", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            setForegroundNotificationSwitch(false)
+            serviceNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        val manager = ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelBlocked = manager.getNotificationChannel(AccnotifyApp.CHANNEL_SERVICE)?.importance == NotificationManager.IMPORTANCE_NONE
+        if (!NotificationManagerCompat.from(ctx).areNotificationsEnabled() || channelBlocked) {
+            setForegroundNotificationSwitch(false)
+            showCleanDialog(title = "允许常驻通知", message = "请在系统设置中允许 Accnotify 的服务通知。", positiveText = "去设置", onPositive = {
+                val intent = Intent(if (channelBlocked) Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS else Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                if (channelBlocked) intent.putExtra(Settings.EXTRA_CHANNEL_ID, AccnotifyApp.CHANNEL_SERVICE)
+                startActivity(intent)
+            })
+            return
+        }
+        applyForegroundNotificationSetting(true)
+    }
+
+    private fun applyForegroundNotificationSetting(enabled: Boolean) {
+        val ctx = context ?: return
+        setForegroundNotificationSwitch(enabled)
+        try {
+            if (app.keyManager.isRegistered && !app.keyManager.hasPendingReset(app.keyManager.serverUrl)) {
+                WebSocketService.refreshNotificationPreference(ctx)
+            } else if (!enabled) {
+                ctx.stopService(Intent(ctx, WebSocketService::class.java))
+            }
+        } catch (e: Exception) {
+            setForegroundNotificationSwitch(false)
+            Toast.makeText(ctx, "无法启动常驻通知，请重新打开应用后重试", Toast.LENGTH_LONG).show()
+            android.util.Log.e("SettingsFragment", "Failed to apply service notification preference", e)
         }
     }
 
@@ -337,12 +499,12 @@ class SettingsFragment : Fragment() {
 
         // Color definitions: key -> (display color hex, name)
         val colors = listOf(
-            "blue" to Pair(0xFF005FB8.toInt(), "蓝色"),
-            "green" to Pair(0xFF107C10.toInt(), "绿色"),
-            "red" to Pair(0xFFC42B1C.toInt(), "红色"),
-            "pink" to Pair(0xFFBF0077.toInt(), "粉色"),
-            "white" to Pair(0xFF9E9E9E.toInt(), "浅色"),
-            "black" to Pair(0xFF1F2937.toInt(), "深色")
+            "white" to Pair(android.graphics.Color.WHITE, "白色"),
+            "blue" to Pair(resources.getColor(R.color.theme_blue_primary, null), "蓝色"),
+            "green" to Pair(resources.getColor(R.color.theme_green_primary, null), "绿色"),
+            "red" to Pair(resources.getColor(R.color.theme_red_primary, null), "红色"),
+            "pink" to Pair(resources.getColor(R.color.theme_pink_primary, null), "粉色"),
+            "black" to Pair(resources.getColor(R.color.theme_black_primary, null), "深色")
         )
 
         val density = resources.displayMetrics.density
@@ -369,7 +531,9 @@ class SettingsFragment : Fragment() {
                 background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.OVAL
                     setColor(color)
-                    if (key == currentTheme) {
+                    if (key == "white") {
+                        setStroke((density + 0.5f).toInt(), android.graphics.Color.LTGRAY)
+                    } else if (key == currentTheme) {
                         setStroke((3 * density).toInt(), color)
                     }
                 }
@@ -384,8 +548,8 @@ class SettingsFragment : Fragment() {
             if (key == currentTheme) {
                 val checkMark = TextView(requireContext()).apply {
                     text = "✓"
-                    setTextColor(android.graphics.Color.WHITE)
-                    textSize = 14f
+                    setTextColor(if (MaterialColors.isColorLight(color)) android.graphics.Color.DKGRAY else android.graphics.Color.WHITE)
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.trah.accnotify.R.dimen.text_body))
                     gravity = android.view.Gravity.CENTER
                     layoutParams = FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT,
@@ -398,7 +562,7 @@ class SettingsFragment : Fragment() {
             // Label
             val label = TextView(requireContext()).apply {
                 text = name
-                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f)
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.trah.accnotify.R.dimen.text_caption))
                 setTextColor(resources.getColor(R.color.clean_text_secondary, null))
                 gravity = android.view.Gravity.CENTER
                 setPadding(0, (4 * density).toInt(), 0, 0)
@@ -467,6 +631,7 @@ class SettingsFragment : Fragment() {
         }
 
         alertDialog.show()
+        KeyDialogControls.compactWindow(requireContext(), alertDialog.window)
     }
 
     override fun onDestroyView() {

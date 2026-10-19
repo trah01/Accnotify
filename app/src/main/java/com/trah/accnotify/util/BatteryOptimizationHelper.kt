@@ -68,37 +68,6 @@ object BatteryOptimizationHelper {
     }
 
     /**
-     * Check if the app has exact alarm permission (Android 12+)
-     */
-    fun canScheduleExactAlarms(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            return true // No permission needed before S
-        }
-
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-        return alarmManager.canScheduleExactAlarms()
-    }
-
-    /**
-     * Open alarm settings to request exact alarm permission
-     */
-    fun requestExactAlarmPermission(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            return
-        }
-
-        try {
-            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                data = Uri.parse("package:${context.packageName}")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to request exact alarm permission", e)
-        }
-    }
-
-    /**
      * Get manufacturer-specific battery saver intent
      * Some manufacturers have their own battery optimization UI
      */

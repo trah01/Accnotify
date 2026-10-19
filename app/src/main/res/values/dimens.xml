@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="action_touch_size">48dp</dimen>
+    <dimen name="action_icon_padding">12dp</dimen>
+    <!-- Shared type scale and control sizes; sp follows the system font setting. -->
+    <dimen name="text_caption">12sp</dimen>
+    <dimen name="text_heading">18sp</dimen>
+    <dimen name="text_control">@dimen/text_body</dimen>
+    <dimen name="control_height">@dimen/action_touch_size</dimen>
+    <dimen name="control_padding_horizontal">12dp</dimen>
+    <dimen name="control_padding_vertical">8dp</dimen>
+    <dimen name="control_action_width">96dp</dimen>
+    <dimen name="icon_size">24dp</dimen>
+    <dimen name="icon_chevron_size">20dp</dimen>
+    <dimen name="text_body">14sp</dimen>
+    <dimen name="text_option_title">16sp</dimen>
+    <dimen name="text_dialog_title">@dimen/text_heading</dimen>
+    <dimen name="option_padding">@dimen/spacing_card</dimen>
+    <dimen name="keep_alive_text_size">@dimen/text_body</dimen>
+    <dimen name="keep_alive_title_size">@dimen/text_heading</dimen>
+    <!-- Shared compact spacing for every client screen and dialog. -->
+    <dimen name="spacing_page">12dp</dimen>
+    <dimen name="spacing_card">12dp</dimen>
+    <dimen name="spacing_home_card">16dp</dimen>
+    <dimen name="spacing_section">16dp</dimen>
+    <dimen name="spacing_gap">12dp</dimen>
+    <dimen name="spacing_small">6dp</dimen>
+    <dimen name="spacing_control">8dp</dimen>
+</resources>

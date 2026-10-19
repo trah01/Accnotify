@@ -5,13 +5,13 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingVertical="12dp"
+    android:paddingVertical="@dimen/spacing_control"
     android:background="?attr/selectableItemBackground">
 
     <ImageView
         android:id="@+id/ivSelected"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="@dimen/icon_size"
+        android:layout_height="@dimen/icon_size"
         android:src="@drawable/ic_fluent_globe"
         app:tint="?attr/colorPrimary"
         android:visibility="invisible" />
@@ -21,27 +21,37 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/spacing_small"
+        android:layout_marginEnd="@dimen/spacing_small"
         android:text="https://an.trah.cn"
         android:textColor="?attr/colorOnSurface"
-        android:textSize="14sp" />
+        android:textSize="@dimen/text_body"
+        android:maxLines="2"
+        android:ellipsize="end" />
 
     <ImageView
         android:id="@+id/btnEdit"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="@dimen/action_touch_size"
+        android:layout_height="@dimen/action_touch_size"
         android:src="@drawable/ic_fluent_edit"
-        app:tint="?attr/colorOnSurfaceVariant"
-        android:padding="4dp"
+        app:tint="?attr/colorOnSurface"
+        android:padding="@dimen/action_icon_padding"
+        android:contentDescription="编辑服务器"
+        android:clickable="true"
+        android:focusable="true"
         android:background="?attr/selectableItemBackgroundBorderless" />
 
     <ImageView
         android:id="@+id/btnDelete"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="@dimen/action_touch_size"
+        android:layout_height="@dimen/action_touch_size"
+        android:layout_marginStart="4dp"
         android:src="@drawable/ic_fluent_delete"
-        app:tint="?attr/colorOnSurfaceVariant"
-        android:padding="4dp"
+        app:tint="?attr/colorOnSurface"
+        android:padding="@dimen/action_icon_padding"
+        android:contentDescription="删除服务器"
+        android:clickable="true"
+        android:focusable="true"
         android:background="?attr/selectableItemBackgroundBorderless" />
 
 </LinearLayout>

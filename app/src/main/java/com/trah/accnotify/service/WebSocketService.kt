@@ -19,15 +19,19 @@ import com.google.gson.JsonObject
 import com.trah.accnotify.AccnotifyApp
 import com.trah.accnotify.R
 import com.trah.accnotify.crypto.E2ECrypto
+import com.trah.accnotify.crypto.SenderEncryption
 import com.trah.accnotify.data.Message
 import com.trah.accnotify.ui.MainActivity
 import com.trah.accnotify.util.NotificationHelper
+import com.trah.accnotify.util.MessageIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -44,6 +48,7 @@ class WebSocketService : Service() {
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
     private val gson = Gson()
+    private val messageMutex = Mutex()
 
     private var webSocket: WebSocket? = null
     @Volatile
@@ -69,6 +74,7 @@ class WebSocketService : Service() {
     private var hasEnteredForeground = false
     @Volatile
     private var startedAsForeground = false
+    private var connectionServerUrl: String? = null
 
     private val client by lazy {
         OkHttpClient.Builder()
@@ -86,7 +92,7 @@ class WebSocketService : Service() {
         // Register network callback
         registerNetworkCallback()
 
-        ensureForegroundState(force = true)
+        ensureForegroundState()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -96,7 +102,7 @@ class WebSocketService : Service() {
         if (intent?.getBooleanExtra(EXTRA_FOREGROUND, false) == true) {
             startedAsForeground = true
         }
-        ensureForegroundState(force = false)
+        ensureForegroundState()
         
         when (intent?.action) {
             ACTION_CONNECT -> {
@@ -104,6 +110,9 @@ class WebSocketService : Service() {
                 connect()
             }
             ACTION_DISCONNECT -> disconnect()
+            ACTION_REFRESH_NOTIFICATION -> {
+                if (!isConnected && !isConnecting) connect()
+            }
             ACTION_SEND_ACK -> {
                 val messageId = intent.getStringExtra(EXTRA_MESSAGE_ID)
                 messageId?.let { sendAck(it) }
@@ -133,6 +142,7 @@ class WebSocketService : Service() {
         
         disconnect()
         scope.cancel()
+        removeForegroundNotification()
         
         super.onDestroy()
     }
@@ -225,26 +235,25 @@ class WebSocketService : Service() {
         networkCallback = null
     }
 
-    private fun ensureForegroundState(force: Boolean) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                val showNotification = AccnotifyApp.getInstance().keyManager.showForegroundNotification
-                if (startedAsForeground && !hasEnteredForeground) {
-                    // Must call startForeground within 5s of startForegroundService
-                    startForeground(NOTIFICATION_ID, createForegroundNotification())
-                    hasEnteredForeground = true
-                    if (!showNotification) {
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                    }
-                } else if (showNotification && (force || !hasEnteredForeground)) {
-                    startForeground(NOTIFICATION_ID, createForegroundNotification())
-                    hasEnteredForeground = true
-                } else if (showNotification && hasEnteredForeground) {
-                    updateForegroundNotification()
+    private fun ensureForegroundState() {
+        try {
+            val showNotification = AccnotifyApp.getInstance().keyManager.showForegroundNotification
+            if (showNotification || startedAsForeground) {
+                // Always promote on an explicit refresh. The in-memory flag
+                // does not prove the system still displays this notification.
+                val notification = createForegroundNotification()
+                startForeground(NOTIFICATION_ID, notification)
+                hasEnteredForeground = true
+                if (showNotification) {
+                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify(NOTIFICATION_ID, notification)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update foreground state", e)
             }
+            startedAsForeground = false
+            if (!showNotification) removeForegroundNotification()
+        } catch (e: Exception) {
+            hasEnteredForeground = false
+            Log.e(TAG, "Failed to update foreground state", e)
         }
     }
 
@@ -260,12 +269,17 @@ class WebSocketService : Service() {
 
         val app = AccnotifyApp.getInstance()
         val keyManager = app.keyManager
+        if (!keyManager.isRegistered || keyManager.hasPendingReset(keyManager.serverUrl)) {
+            synchronized(connectionLock) { isConnecting = false }
+            return
+        }
         val deviceKey = keyManager.getDeviceKey()
         if (deviceKey == null) {
             synchronized(connectionLock) { isConnecting = false }
             return
         }
         val serverUrl = keyManager.serverUrl
+        connectionServerUrl = serverUrl
 
         // Convert HTTP to WS
         val wsUrl = serverUrl
@@ -301,6 +315,17 @@ class WebSocketService : Service() {
                         isConnecting = false
                         reconnectAttempt = 0
                         broadcastConnectionStatus(true)
+                        scope.launch {
+                            try {
+                                val bindingClient = com.trah.accnotify.crypto.DeviceBindingClient(keyManager)
+                                if (keyManager.getPendingBinding(serverUrl) != null && bindingClient.finishPending(serverUrl, recoverOnly = true)) {
+                                    disconnect(); connect()
+                                } else {
+                                    bindingClient.status(serverUrl)
+                                    if (connectionServerUrl == serverUrl) broadcastConnectionStatus(true)
+                                }
+                            } catch (_: Exception) { /* Legacy servers do not expose routing metadata. */ }
+                        }
                     } else {
                         Log.w(TAG, "Ignoring stale onOpen callback")
                         webSocket.close(1000, "Stale connection")
@@ -309,7 +334,9 @@ class WebSocketService : Service() {
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                handleMessage(text)
+                synchronized(connectionLock) {
+                    if (this@WebSocketService.webSocket == webSocket) handleMessage(text)
+                }
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
@@ -347,7 +374,18 @@ class WebSocketService : Service() {
                         isConnecting = false
                         this@WebSocketService.webSocket = null
                         broadcastConnectionStatus(false)
-                        scheduleReconnect()
+                        if (response?.code == 401 && !keyManager.hasPendingReset(serverUrl) && keyManager.getDeviceKey(serverUrl) == deviceKey) {
+                            scope.launch {
+                                try {
+                                    val bindingClient = com.trah.accnotify.crypto.DeviceBindingClient(keyManager)
+                                    if (!bindingClient.finishPending(serverUrl, recoverOnly = true) && keyManager.getDeviceKey(serverUrl) == deviceKey) {
+                                        keyManager.completeUnregister(serverUrl)
+                                        bindingClient.register(serverUrl)
+                                    }
+                                } catch (_: Exception) { }
+                                scheduleReconnect()
+                            }
+                        } else scheduleReconnect()
                     } else {
                         Log.d(TAG, "Ignoring failure from stale connection")
                     }
@@ -387,7 +425,7 @@ class WebSocketService : Service() {
     }
 
     private fun handleMessage(text: String) {
-        Log.d(TAG, "Received message: ${text.take(200)}")
+        Log.d(TAG, "Received WebSocket message")
         
         // Acquire temporary WakeLock to ensure message is fully processed
         acquireTemporaryWakeLock()
@@ -414,73 +452,119 @@ class WebSocketService : Service() {
         val app = AccnotifyApp.getInstance()
         val messageId = json.get("id")?.asString ?: return
         val data = json.getAsJsonObject("data") ?: return
-        Log.i(TAG, "Push data: title=${data.get("title")}, body=${data.get("body")}")
         
         // Update last message time and count for notification display
         lastMessageTime = System.currentTimeMillis()
         messageCount++
         updateForegroundNotification()
 
-        var title = data.get("title")?.asString
-        var body = data.get("body")?.asString
-        val group = data.get("group")?.asString
-        val icon = data.get("icon")?.asString
-        val url = data.get("url")?.asString
-        var image = data.get("image")?.asString
-        val sound = data.get("sound")?.asString
-        val badge = data.get("badge")?.asInt ?: 0
-        val encryptedContent = data.get("encrypted_content")?.asString
-
-        // Try to decrypt if encrypted
+        val senderEncrypted = data.has("encryption") || data.has("ciphertext") || data.has("nonce")
+        val encryptedContent = if (senderEncrypted) gson.toJson(data) else data.get("encrypted_content")?.asString
         var decryptedContent: String? = null
-        if (!encryptedContent.isNullOrEmpty()) {
-            val privateKey = app.keyManager.getPrivateKey()
-            decryptedContent = E2ECrypto.tryDecrypt(encryptedContent, privateKey)
+        val payload = if (senderEncrypted || !encryptedContent.isNullOrEmpty()) {
+            val server = connectionServerUrl ?: app.keyManager.serverUrl
+            val decryptedPayload = try {
+                decryptedContent = if (senderEncrypted) {
+                    val key = requireNotNull(app.keyManager.getSenderEncryptionKey(server))
+                    SenderEncryption.decrypt(data.get("encryption").asString, data.get("nonce").asString,
+                        data.get("ciphertext").asString, key)
+                } else {
+                    E2ECrypto.tryDecrypt(encryptedContent, app.keyManager.getPrivateKey(server))
+                }
+                decryptedContent?.let { gson.fromJson(it, JsonObject::class.java) }?.also { fields ->
+                    if (senderEncrypted) {
+                        val deleting = fields.get("delete")?.takeIf { it.isJsonPrimitive }?.asString in listOf("1", "true")
+                        val externalId = fields.get("id")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
+                        if (deleting) {
+                            require(!externalId.isNullOrEmpty())
+                        } else {
+                            val content = fields.get("markdown")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString && it.asString.isNotEmpty() }
+                                ?: fields.get("body")
+                            require(content != null && content.isJsonPrimitive && content.asJsonPrimitive.isString)
+                        }
+                        for (field in listOf("title", "body", "markdown", "group", "icon", "url", "image")) {
+                            val value = fields.get(field)
+                            require(value == null || value.isJsonNull || value.isJsonPrimitive && value.asJsonPrimitive.isString)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                null
+            }
+            if (decryptedPayload == null) {
+                Log.e(TAG, "Unable to decrypt message $messageId")
+                NotificationHelper.showNotification(
+                    context = this,
+                    messageId = messageId,
+                    title = "消息无法解密",
+                    body = if (senderEncrypted) "请在首页配置当前服务器的发送端加密密钥，并确认与发送脚本一致。"
+                        else "请确认当前设备的加密密钥，并重新注册设备。"
+                )
+                return
+            }
+            decryptedPayload
+        } else {
+            // Retain compatibility with older servers sending plaintext messages.
+            data
+        }
 
-            // Parse decrypted content
-            if (decryptedContent != null) {
+        fun stringField(name: String) = payload.get(name)?.takeUnless { it.isJsonNull }?.asString
+        val title = stringField("title")
+        val body = stringField("markdown")?.takeIf { it.isNotEmpty() } ?: stringField("body")
+        val group = stringField("group")
+        val icon = stringField("icon")
+        val url = stringField("url")
+        val image = stringField("image")
+
+        val externalId = payload.get("id")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
+        val deleting = payload.get("delete")?.takeIf { it.isJsonPrimitive }?.asString in listOf("1", "true")
+        if (deleting && externalId.isNullOrEmpty()) {
+            Log.e(TAG, "Deletion command is missing its notification ID")
+            return
+        }
+        val server = connectionServerUrl ?: app.keyManager.serverUrl
+        val historyId = MessageIdentity.localId(server, app.keyManager.getDeviceKey(server).orEmpty(), externalId, messageId)
+        val sequence = json.get("sequence")?.takeUnless { it.isJsonNull }?.asLong ?: 0L
+        val message = if (deleting) null else Message(
+            messageId = historyId,
+            title = title,
+            body = body,
+            group = group,
+            icon = icon,
+            url = url,
+            image = image,
+            encryptedContent = encryptedContent,
+            decryptedContent = decryptedContent,
+            timestamp = Date()
+        )
+
+        scope.launch {
+            messageMutex.withLock {
                 try {
-                    val decrypted = gson.fromJson(decryptedContent, JsonObject::class.java)
-                    title = decrypted.get("title")?.asString ?: title
-                    body = decrypted.get("body")?.asString ?: body
-                    image = decrypted.get("image")?.asString ?: image
+                    val applied = app.database.messageDao().applyIncoming(historyId, sequence, message)
+                    // ACK the unique delivery, never the caller's replaceable notification ID.
+                    sendAck(messageId)
+                    if (applied) {
+                        if (deleting) {
+                            NotificationHelper.cancelNotification(this@WebSocketService, historyId)
+                        } else {
+                            NotificationHelper.showNotification(
+                                context = this@WebSocketService,
+                                messageId = historyId,
+                                title = title ?: "Accnotify",
+                                body = body.orEmpty(),
+                                group = group,
+                                url = url,
+                                image = image,
+                                revision = messageId
+                            )
+                        }
+                    }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error parsing decrypted content", e)
+                    Log.e(TAG, "Unable to apply received message: ${e.javaClass.simpleName}")
                 }
             }
         }
-
-        // Save to database
-        scope.launch {
-            val message = Message(
-                messageId = messageId,
-                title = title,
-                body = body,
-                group = group,
-                icon = icon,
-                url = url,
-                image = image,
-                sound = sound,
-                badge = badge,
-                encryptedContent = encryptedContent,
-                decryptedContent = decryptedContent,
-                timestamp = Date()
-            )
-            app.database.messageDao().insert(message)
-        }
-
-        // Show notification
-        NotificationHelper.showNotification(
-            context = this,
-            messageId = messageId,
-            title = title ?: "Accnotify",
-            body = body ?: "",
-            group = group,
-            url = url
-        )
-
-        // Send ACK
-        sendAck(messageId)
     }
 
     private fun sendAck(messageId: String) {
@@ -512,9 +596,22 @@ class WebSocketService : Service() {
     }
     
     private fun updateForegroundNotification() {
-        val notification = buildForegroundNotification()
+        scope.launch(Dispatchers.Main.immediate) {
+            if (!AccnotifyApp.getInstance().keyManager.showForegroundNotification) {
+                removeForegroundNotification()
+                return@launch
+            }
+            if (!hasEnteredForeground) return@launch
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.notify(NOTIFICATION_ID, buildForegroundNotification())
+        }
+    }
+
+    private fun removeForegroundNotification() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        hasEnteredForeground = false
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        notificationManager.cancel(NOTIFICATION_ID)
     }
     
     private fun buildForegroundNotification(): Notification {
@@ -582,6 +679,7 @@ class WebSocketService : Service() {
         private const val NOTIFICATION_ID = 1
 
         const val ACTION_CONNECT = "com.trah.accnotify.action.CONNECT"
+        private const val ACTION_REFRESH_NOTIFICATION = "com.trah.accnotify.action.REFRESH_NOTIFICATION"
         const val ACTION_DISCONNECT = "com.trah.accnotify.action.DISCONNECT"
         const val ACTION_SEND_ACK = "com.trah.accnotify.action.SEND_ACK"
         const val ACTION_CONNECTION_STATUS = "com.trah.accnotify.action.CONNECTION_STATUS"
@@ -594,8 +692,18 @@ class WebSocketService : Service() {
          * Helper to start the service properly
          */
         fun start(context: Context) {
+            startWithAction(context, ACTION_CONNECT)
+        }
+
+        fun refreshNotificationPreference(context: Context) {
+            startWithAction(context, ACTION_REFRESH_NOTIFICATION)
+        }
+
+        private fun startWithAction(context: Context, serviceAction: String) {
+            val keys = AccnotifyApp.getInstance().keyManager
+            if (!keys.isRegistered || keys.hasPendingReset(keys.serverUrl)) return
             val intent = Intent(context, WebSocketService::class.java).apply {
-                action = ACTION_CONNECT
+                action = serviceAction
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val showNotification = try {

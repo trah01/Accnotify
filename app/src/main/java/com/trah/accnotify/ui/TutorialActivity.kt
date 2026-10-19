@@ -30,6 +30,8 @@ class TutorialActivity : AppCompatActivity() {
         "POST 简单消息",
         "POST 带标题消息",
         "POST 多行消息",
+        "POST 仅电脑",
+        "POST 仅手机",
         "Webhook 通用",
         "Webhook GitHub",
         "POST 图片推送 (Base64)"
@@ -57,6 +59,14 @@ class TutorialActivity : AppCompatActivity() {
             "POST 多行消息" -> """{
   "title": "任务完成",
   "body": "备份任务已完成\n耗时: 5分钟\n大小: 1.2GB"
+}"""
+            "POST 仅电脑" -> """{
+  "body": "发送给同一推送 ID 下的全部电脑",
+  "target": "pc"
+}"""
+            "POST 仅手机" -> """{
+  "body": "发送给同一推送 ID 下的全部手机",
+  "target": "mobile"
 }"""
             "Webhook 通用" -> """{
   "title": "部署通知",
@@ -174,14 +184,14 @@ class TutorialActivity : AppCompatActivity() {
     private fun getPushUrl(): String {
         val keyManager = AccnotifyApp.getInstance().keyManager
         val serverUrl = keyManager.serverUrl
-        val deviceKey = keyManager.getDeviceKey() ?: "YOUR_DEVICE_KEY"
+        val deviceKey = keyManager.getPushKey() ?: "YOUR_DEVICE_KEY"
         return "$serverUrl/push/$deviceKey"
     }
 
     private fun getWebhookUrl(): String {
         val keyManager = AccnotifyApp.getInstance().keyManager
         val serverUrl = keyManager.serverUrl
-        val deviceKey = keyManager.getDeviceKey() ?: "YOUR_DEVICE_KEY"
+        val deviceKey = keyManager.getPushKey() ?: "YOUR_DEVICE_KEY"
         return "$serverUrl/webhook/$deviceKey"
     }
 
@@ -192,97 +202,94 @@ class TutorialActivity : AppCompatActivity() {
 
     private fun setupInstructions() {
         val pushUrl = getPushUrl()
-        val webhookUrl = getWebhookUrl()
-        
         val markdown = """
-## 什么是 Accnotify
-
-Accnotify 是一款基于 **WebSocket** 的安卓推送工具。通过简单的 HTTP 请求，即可向手机发送实时通知。
-
----
-
 ## 快速开始
 
-1. 复制首页的 **Push URL**
-2. 向该地址发送 HTTP 请求
-3. 手机即时收到推送通知
-
----
-
-## 请求参数
-
-- `title` - 通知标题（可选）
-- `body` - 通知内容（**必填**）
-- `image` - 图片数据，支持 URL 或 Base64（可选）
-
----
+1. 在首页点击 **注册设备 / 同步连接**。
+2. 点击 ID 旁的复制按钮，复制 **Push 链接（全部设备）**。
+3. 向链接发送 GET 或 POST 请求，在历史消息中查看结果。
 
 ## 请求方式
 
-**GET 请求（不加密，仅测试用）**
+**GET**：把标题和内容接在推送地址后，特殊字符需要进行 URL 编码。
 ```
 ${pushUrl}/标题/内容
 ```
 
-**POST 请求（RSA 加密）**
+**POST**：向推送地址提交 JSON。
 ```
 POST ${pushUrl}
 Content-Type: application/json
 
-{"title": "标题", "body": "内容"}
+{"title":"标题","body":"内容"}
 ```
 
-**带图片的推送**
+## 接收设备
+
+不传 `target` 或设置为 `all`，发送给这个推送 ID 下的全部设备。
+
+- `pc`：全部电脑。
+- `mobile`：全部手机。
+- 某台设备的标识：只发送给该设备。
+
+只推送给全部电脑：
 ```json
-{
-  "title": "图片通知",
-  "body": "正文",
-  "image": "<Base64 编码的图片数据>"
-}
+{"body":"任务完成","target":"pc"}
 ```
 
----
+可在首页复制 **Push 链接（仅本机）**。它使用 `?target=设备标识` 指定本机；其他设备的标识在 **设置 → 设备与消息提醒 → 同 ID 的设备** 中查看。
 
-## Webhook 推送
+## 请求参数
 
-支持多个平台的 Webhook，服务端自动解析并格式化为可读通知：
+- `body`：消息内容，必填。
+- `title`：标题，可选。
+- `image`：图片 URL 或 Base64，可选。
+- `target`：接收设备，可选，默认 `all`。
 
-| 平台 | 地址 |
-|------|------|
-| 通用 | `${webhookUrl}` |
-| GitHub | `${webhookUrl}/github` |
-| GitLab | `${webhookUrl}/gitlab` |
-| Docker Hub | `${webhookUrl}/docker` |
-| Gitea | `${webhookUrl}/gitea` |
+带图片的推送：
+```json
+{"title":"图片通知","body":"正文","image":"<Base64 图片数据>"}
+```
 
-**GitHub Webhook 配置：**  
-在 GitHub 仓库 → Settings → Webhooks → Add webhook  
-- Payload URL: `${webhookUrl}/github`  
-- Content type: `application/json`  
-- 事件：选择 push 或其他需要的事件
+## 绑定手机和电脑
 
----
+每台手机和电脑可独立使用，也可在 **同一服务器** 上共用推送 ID。
 
-## 安全说明
+1. 在要加入的设备上打开 **设置 → 设备与消息提醒 → 绑定已有 ID**。
+2. 粘贴已有设备的 Push 链接，点击 **发送绑定验证码**。
+3. 在确认设备的历史消息中查看验证码，在发起设备上输入并点击 **确认绑定**。
 
-- **POST 请求**：RSA 端到端加密
-- **GET 请求**：明文传输，仅用于测试
-- Push Key 是唯一凭证，请妥善保管
-- 重置密钥后，旧链接立即失效
+验证码 5 分钟内有效。多个手机和电脑可以使用同一推送 ID，每台设备仍有独立标识和 RSA 密钥。在 **同 ID 的设备** 中解除绑定或移除一台设备，不影响其他成员。
 
----
+## 消息提醒规则
 
-## 应用场景
+在 **设置 → 设备与消息提醒 → 消息提醒规则** 中设置工作日、指定星期、提醒时段、每日静默时段和自定义日期，点击 **保存** 生效。
 
-- 服务器监控告警
-- CI/CD 构建通知（GitHub / GitLab Webhook）
-- 自动化脚本通知
-- IoT 设备状态推送
-- 定时任务提醒
+关闭通知或处于静默时段，消息仍保存到历史，恢复提醒后不会补发旧通知。结束早于开始表示跨午夜；开始与结束相同表示全天。
+
+启用 **节假日静默** 或 **仅工作日** 时，在页面手动获取本年度节假日，或导入本地日历。获取成功会缓存全年数据，不会自动联网更新；没有本年度日历时，工作日按周一至周五判断。
+
+## 发送端加密
+
+在首页打开 **发送端加密密钥**，配置与发送脚本相同的密钥。每台设备需要分别配置；绑定不会自动同步密钥。此功能需要脚本主动加密，配置密钥不会自动加密普通推送。
+
+详细步骤见 [项目 README](https://github.com/trah01/Accnotify/blob/main/README.md#发送端加密)。
+
+## ID 与安全
+
+- 首页点击 ID 可切换本机的公用或独立 ID；共用推送 ID 的设备需先解除绑定。
+- 普通推送由服务端按各设备公钥分别加密，服务端仍可读取原始消息。
+- 推送地址请妥善保管，建议使用 HTTPS。敏感内容使用 POST，避免正文出现在 URL 中。
+- 仅重置 RSA 密钥保留推送地址；重置或移除某台设备不会使其他成员的共用地址失效。
         """.trimIndent()
 
-        
-        val markwon = io.noties.markwon.Markwon.create(this)
+        val markwon = io.noties.markwon.Markwon.builder(this)
+            .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {
+                override fun configureTheme(builder: io.noties.markwon.core.MarkwonTheme.Builder) {
+                    builder.headingTextSizeMultipliers(floatArrayOf(1.35f, 1.2f, 1.1f, 1.05f, 1f, 1f))
+                        .headingBreakHeight(0)
+                }
+            }).build()
         markwon.setMarkdown(binding.tvInstructions, markdown)
     }
 
@@ -360,7 +367,7 @@ Content-Type: application/json
                     }
 
                     if (responseCode in 200..299) {
-                        Toast.makeText(this@TutorialActivity, "推送成功！请查看通知", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@TutorialActivity, "推送成功，请查看历史消息", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(this@TutorialActivity, "推送失败: HTTP $responseCode", Toast.LENGTH_SHORT).show()
                     }

@@ -16,10 +16,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.ItemTouchHelper
 import com.trah.accnotify.AccnotifyApp
 import com.trah.accnotify.databinding.FragmentMessagesBinding
 import com.trah.accnotify.data.Message
 import com.trah.accnotify.R
+import com.trah.accnotify.util.NotificationHelper
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import io.noties.markwon.Markwon
@@ -39,15 +41,21 @@ class MessagesFragment : Fragment() {
     private var pendingMessageId: String? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        selectedGroup = savedInstanceState?.getString("selected_message_group") ?: selectedGroup
         _binding = FragmentMessagesBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        adapter = MessageAdapter { message -> showMessageDetailDialog(message) }
+        adapter = MessageAdapter(requireContext()) { message -> showMessageDetailDialog(message) }
         setupUI()
         observeMessages()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("selected_message_group", selectedGroup)
     }
 
     override fun onDestroyView() {
@@ -56,6 +64,76 @@ class MessagesFragment : Fragment() {
     }
 
     private var allMessages: List<Message> = emptyList()
+    private var selectedGroup: String? = null
+
+    fun showGroupMessages(group: String?) {
+        selectedGroup = group?.trim()
+        if (_binding != null && ::adapter.isInitialized) {
+            updateGroupFilterLabel()
+            filterMessages(binding.etSearch.text.toString())
+        }
+    }
+
+    private fun updateGroupFilterLabel() {
+        binding.btnGroupFilter.text = selectedGroup?.ifEmpty { "未分组" } ?: "全部分组"
+        binding.btnGroupFilter.contentDescription = "选择消息分组，当前${binding.btnGroupFilter.text}"
+    }
+
+    private fun showGroupFilter() {
+        val groups = allMessages.map { it.group?.trim().orEmpty() }.distinct().sorted()
+        val options = listOf<String?>(null) + groups
+        val ctx = requireContext()
+        val density = resources.displayMetrics.density
+        val surface = com.google.android.material.color.MaterialColors.getColor(binding.root,
+            com.google.android.material.R.attr.colorSurface)
+        val textColor = com.google.android.material.color.MaterialColors.getColor(binding.root,
+            com.google.android.material.R.attr.colorOnSurface)
+        val accent = com.google.android.material.color.MaterialColors.getColor(binding.root,
+            com.google.android.material.R.attr.colorPrimary)
+        val outline = com.google.android.material.color.MaterialColors.getColor(binding.root,
+            com.google.android.material.R.attr.colorOutlineVariant)
+        val popup = androidx.appcompat.widget.ListPopupWindow(ctx).apply {
+            anchorView = binding.btnGroupFilter
+            isModal = true
+            width = minOf((240 * density).toInt(), resources.displayMetrics.widthPixels - (32 * density).toInt())
+            setDropDownGravity(android.view.Gravity.END)
+            setInputMethodMode(android.widget.PopupWindow.INPUT_METHOD_NOT_NEEDED)
+            setBackgroundDrawable(com.google.android.material.shape.MaterialShapeDrawable(
+                com.google.android.material.shape.ShapeAppearanceModel.builder()
+                    .setAllCornerSizes(12 * density).build()).apply {
+                fillColor = android.content.res.ColorStateList.valueOf(surface)
+                setStroke(density, outline)
+            })
+        }
+        popup.setAdapter(object : android.widget.BaseAdapter() {
+            override fun getCount() = options.size
+            override fun getItem(position: Int) = options[position]
+            override fun getItemId(position: Int) = position.toLong()
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val row = convertView as? com.google.android.material.radiobutton.MaterialRadioButton
+                    ?: com.google.android.material.radiobutton.MaterialRadioButton(ctx).apply {
+                        minHeight = resources.getDimensionPixelSize(R.dimen.action_touch_size)
+                        gravity = android.view.Gravity.CENTER_VERTICAL
+                        setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.trah.accnotify.R.dimen.text_body))
+                        setPadding((12 * density).toInt(), 0, (12 * density).toInt(), 0)
+                        isClickable = false
+                        isFocusable = false
+                        setUseMaterialThemeColors(true)
+                    }
+                val group = options[position]
+                row.text = group?.ifEmpty { "未分组" } ?: "全部分组"
+                row.isChecked = selectedGroup == group
+                row.setTextColor(if (row.isChecked) accent else textColor)
+                return row
+            }
+        })
+        popup.setOnItemClickListener { _, _, position, _ ->
+            showGroupMessages(options[position])
+            popup.dismiss()
+        }
+        popup.show()
+        popup.setSelection(options.indexOf(selectedGroup))
+    }
     
     /**
      * 通过消息ID显示消息详情（从通知点击调用）
@@ -74,6 +152,9 @@ class MessagesFragment : Fragment() {
     private fun setupUI() {
         binding.recyclerView.layoutManager = LinearLayoutManager(context)
         binding.recyclerView.adapter = adapter
+        setupSwipeDelete()
+        updateGroupFilterLabel()
+        binding.btnGroupFilter.setOnClickListener { showGroupFilter() }
 
         binding.fabClear.setOnClickListener {
             showClearConfirmDialog()
@@ -89,14 +170,71 @@ class MessagesFragment : Fragment() {
         })
     }
 
-    private fun filterMessages(query: String) {
-        val filtered = if (query.isBlank()) {
-            allMessages
-        } else {
-            allMessages.filter { msg ->
-                msg.title?.contains(query, ignoreCase = true) == true ||
-                msg.body?.contains(query, ignoreCase = true) == true
+    private fun setupSwipeDelete() {
+        val callback = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+            override fun onMove(recyclerView: RecyclerView, source: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder) = false
+
+            override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder) = 0.5f
+
+            // A quick short fling should not bypass the swipe distance threshold.
+            override fun getSwipeEscapeVelocity(defaultValue: Float) = Float.MAX_VALUE
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val position = viewHolder.adapterPosition
+                if (position == RecyclerView.NO_POSITION) return
+                val message = adapter.messageAt(position) ?: return
+                adapter.removeMessage(message.messageId)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        AccnotifyApp.getInstance().database.messageDao().delete(message.messageId)
+                        context?.let { NotificationHelper.cancelNotification(it, message.messageId) }
+                        context?.let { Toast.makeText(it, "消息已删除", Toast.LENGTH_SHORT).show() }
+                    } catch (_: Exception) {
+                        if (_binding != null) {
+                            filterMessages(binding.etSearch.text.toString())
+                            Toast.makeText(context, "删除失败，请重试", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
+
+            override fun onChildDraw(canvas: android.graphics.Canvas, recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder, dX: Float, dY: Float,
+                actionState: Int, isCurrentlyActive: Boolean) {
+                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX != 0f) {
+                    val item = viewHolder.itemView
+                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                    paint.color = com.google.android.material.color.MaterialColors.getColor(item,
+                        com.google.android.material.R.attr.colorError)
+                    val left = if (dX > 0) item.left.toFloat() else (item.right + dX).coerceAtLeast(item.left.toFloat())
+                    val right = if (dX > 0) (item.left + dX).coerceAtMost(item.right.toFloat()) else item.right.toFloat()
+                    val radius = (item as? com.google.android.material.card.MaterialCardView)?.radius
+                        ?: 12 * item.resources.displayMetrics.density
+                    canvas.drawRoundRect(left, item.top.toFloat(), right, item.bottom.toFloat(), radius, radius, paint)
+                    paint.color = com.google.android.material.color.MaterialColors.getColor(item,
+                        com.google.android.material.R.attr.colorOnError)
+                    paint.textSize = item.resources.getDimension(com.trah.accnotify.R.dimen.text_body)
+                    val padding = 24 * item.resources.displayMetrics.density
+                    paint.textAlign = if (dX > 0) android.graphics.Paint.Align.LEFT else android.graphics.Paint.Align.RIGHT
+                    val x = if (dX > 0) item.left + padding else item.right - padding
+                    val y = (item.top + item.bottom) / 2f - (paint.ascent() + paint.descent()) / 2f
+                    val saved = canvas.save()
+                    canvas.clipRect(left, item.top.toFloat(), right, item.bottom.toFloat())
+                    canvas.drawText("删除", x, y, paint)
+                    canvas.restoreToCount(saved)
+                }
+                super.onChildDraw(canvas, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+            }
+        }
+        ItemTouchHelper(callback).attachToRecyclerView(binding.recyclerView)
+    }
+
+    private fun filterMessages(query: String) {
+        val filtered = allMessages.filter { msg ->
+            (selectedGroup == null || msg.group?.trim().orEmpty() == selectedGroup) &&
+                (query.isBlank() || msg.title?.contains(query, ignoreCase = true) == true ||
+                    msg.body?.contains(query, ignoreCase = true) == true)
         }
         adapter.submitList(filtered)
         binding.tvEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
@@ -142,6 +280,21 @@ class MessagesFragment : Fragment() {
         val scrollBody = dialogView.findViewById<androidx.core.widget.NestedScrollView>(R.id.scrollBody)
         val btnCopy = dialogView.findViewById<TextView>(R.id.btnCopy)
         val btnClose = dialogView.findViewById<TextView>(R.id.btnClose)
+        val btnOpenUrl = dialogView.findViewById<TextView>(R.id.btnOpenUrl)
+        val messageUrl = message.url?.trim().orEmpty()
+        if (messageUrl.isNotEmpty()) {
+            btnOpenUrl.visibility = View.VISIBLE
+            btnOpenUrl.setOnClickListener {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(messageUrl))
+                        .addCategory(Intent.CATEGORY_BROWSABLE))
+                } catch (_: android.content.ActivityNotFoundException) {
+                    Toast.makeText(requireContext(), "没有可以打开此链接的应用", Toast.LENGTH_LONG).show()
+                } catch (_: SecurityException) {
+                    Toast.makeText(requireContext(), "系统不允许打开此链接", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         
@@ -168,6 +321,20 @@ class MessagesFragment : Fragment() {
             body
         }
         markwon.setMarkdown(tvBody, formattedOnly)
+        if (messageUrl.isNotEmpty() && !formattedOnly.contains(messageUrl)) {
+            val content = android.text.SpannableStringBuilder(tvBody.text)
+            if (content.isNotEmpty()) content.append("\n\n")
+            val start = content.length
+            content.append(messageUrl)
+            content.setSpan(object : android.text.style.ClickableSpan() {
+                override fun onClick(widget: View) { btnOpenUrl.performClick() }
+                override fun updateDrawState(ds: android.text.TextPaint) {
+                    ds.color = resources.getColor(R.color.message_detail_text, null)
+                    ds.isUnderlineText = true
+                }
+            }, start, content.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            tvBody.text = content
+        }
         
         // Add "View Raw Content" toggle if content is JSON or has separator
         if (isJson || hasSeparator) {
@@ -181,21 +348,21 @@ class MessagesFragment : Fragment() {
                     android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    topMargin = (8 * resources.displayMetrics.density).toInt()
+                    topMargin = resources.getDimensionPixelSize(R.dimen.spacing_small)
                 }
                 setPadding(
-                    (12 * resources.displayMetrics.density).toInt(),
-                    (12 * resources.displayMetrics.density).toInt(),
-                    (12 * resources.displayMetrics.density).toInt(),
-                    (12 * resources.displayMetrics.density).toInt()
+                    0,
+                    resources.getDimensionPixelSize(R.dimen.spacing_control),
+                    0,
+                    resources.getDimensionPixelSize(R.dimen.spacing_control)
                 )
-                setBackgroundResource(R.drawable.bg_clean_input)
+                setBackgroundResource(R.color.message_detail_background)
                 visibility = View.GONE
             }
             val rawText = TextView(requireContext()).apply {
                 text = trimmedBody
-                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
-                setTextColor(resources.getColor(R.color.clean_text_secondary, null))
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.trah.accnotify.R.dimen.text_body))
+                setTextColor(resources.getColor(R.color.message_detail_secondary, null))
                 setTypeface(android.graphics.Typeface.MONOSPACE)
                 setTextIsSelectable(true)
             }
@@ -204,9 +371,9 @@ class MessagesFragment : Fragment() {
             // Toggle button
             val toggleBtn = TextView(requireContext()).apply {
                 text = "点击查看原始内容 ▼"
-                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f)
-                setTextColor(resources.getColor(R.color.clean_primary, null))
-                setPadding(0, (12 * resources.displayMetrics.density).toInt(), 0, (4 * resources.displayMetrics.density).toInt())
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.trah.accnotify.R.dimen.text_body))
+                setTextColor(resources.getColor(R.color.message_detail_text, null))
+                setPadding(0, resources.getDimensionPixelSize(R.dimen.spacing_control), 0, (4 * resources.displayMetrics.density).toInt())
                 setOnClickListener {
                     if (rawScrollView.visibility == View.GONE) {
                         rawScrollView.visibility = View.VISIBLE
@@ -248,9 +415,9 @@ class MessagesFragment : Fragment() {
                 // Loading indicator
                 val loadingText = TextView(requireContext()).apply {
                     text = "图片加载中..."
-                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f)
-                    setTextColor(resources.getColor(R.color.clean_text_secondary, null))
-                    setPadding(0, (12 * resources.displayMetrics.density).toInt(), 0, (4 * resources.displayMetrics.density).toInt())
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.trah.accnotify.R.dimen.text_body))
+                    setTextColor(resources.getColor(R.color.message_detail_secondary, null))
+                    setPadding(0, resources.getDimensionPixelSize(R.dimen.spacing_control), 0, (4 * resources.displayMetrics.density).toInt())
                 }
                 parentLayout.addView(loadingText, actualInsertIndex)
                 
@@ -260,7 +427,7 @@ class MessagesFragment : Fragment() {
                         android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
                         android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        topMargin = (8 * resources.displayMetrics.density).toInt()
+                        topMargin = resources.getDimensionPixelSize(R.dimen.spacing_small)
                     }
                     adjustViewBounds = true
                     scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
@@ -271,9 +438,9 @@ class MessagesFragment : Fragment() {
                 // "Show original URL" button
                 val urlBtn = TextView(requireContext()).apply {
                     text = "查看原始图片链接"
-                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f)
-                    setTextColor(resources.getColor(R.color.clean_primary, null))
-                    setPadding(0, (8 * resources.displayMetrics.density).toInt(), 0, (4 * resources.displayMetrics.density).toInt())
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.trah.accnotify.R.dimen.text_body))
+                    setTextColor(resources.getColor(R.color.message_detail_text, null))
+                    setPadding(0, resources.getDimensionPixelSize(R.dimen.spacing_small), 0, (4 * resources.displayMetrics.density).toInt())
                     setOnClickListener {
                         showCleanDialog(
                             title = "图片链接",
@@ -323,12 +490,12 @@ class MessagesFragment : Fragment() {
                             }
                         } else if (isAdded) {
                             loadingText.text = "图片加载失败（无法解码）"
-                            loadingText.setTextColor(resources.getColor(R.color.clean_text_secondary, null))
+                            loadingText.setTextColor(resources.getColor(R.color.message_detail_secondary, null))
                         }
                     } catch (e: Exception) {
                         if (isAdded) {
                             loadingText.text = "图片加载失败: ${e.message}"
-                            loadingText.setTextColor(resources.getColor(R.color.clean_text_secondary, null))
+                            loadingText.setTextColor(resources.getColor(R.color.message_detail_secondary, null))
                             android.util.Log.e("MessagesFragment", "Failed to load image from URL: $imageContent", e)
                         }
                     }
@@ -349,7 +516,7 @@ class MessagesFragment : Fragment() {
                                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
                                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
                             ).apply {
-                                topMargin = (12 * resources.displayMetrics.density).toInt()
+                                topMargin = resources.getDimensionPixelSize(R.dimen.spacing_control)
                             }
                             adjustViewBounds = true
                             setImageBitmap(bitmap)
@@ -374,7 +541,9 @@ class MessagesFragment : Fragment() {
         alertDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         btnCopy.setOnClickListener {
-            copyToClipboard(message.body ?: "")
+            val bodyToCopy = message.body.orEmpty()
+            copyToClipboard(if (messageUrl.isNotEmpty() && !bodyToCopy.contains(messageUrl))
+                listOf(bodyToCopy, messageUrl).filter { it.isNotEmpty() }.joinToString("\n\n") else bodyToCopy)
             Toast.makeText(requireContext(), "已复制到剪贴板", Toast.LENGTH_SHORT).show()
         }
 
@@ -383,6 +552,7 @@ class MessagesFragment : Fragment() {
         }
 
         alertDialog.show()
+        KeyDialogControls.compactWindow(requireContext(), alertDialog.window)
     }
 
     /**
@@ -584,6 +754,7 @@ class MessagesFragment : Fragment() {
             onPositive = {
                 viewLifecycleOwner.lifecycleScope.launch {
                     AccnotifyApp.getInstance().database.messageDao().deleteAll()
+                    context?.let { NotificationHelper.cancelAllMessageNotifications(it) }
                 }
             }
         )
@@ -636,17 +807,37 @@ class MessagesFragment : Fragment() {
         }
 
         alertDialog.show()
+        KeyDialogControls.compactWindow(requireContext(), alertDialog.window)
     }
 
     private class MessageAdapter(
+        context: Context,
         private val onItemClick: (Message) -> Unit
     ) : RecyclerView.Adapter<MessageAdapter.ViewHolder>() {
         private var messages: List<Message> = emptyList()
         private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        private val previewMarkwon = Markwon.builder(context)
+            .usePlugin(SoftBreakAddsNewLinePlugin.create())
+            .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {
+                override fun configureTheme(builder: io.noties.markwon.core.MarkwonTheme.Builder) {
+                    // 列表标题用粗体区分，字号保持与预览正文一致。
+                    builder.headingTextSizeMultipliers(floatArrayOf(1f, 1f, 1f, 1f, 1f, 1f))
+                }
+            })
+            .build()
 
         fun submitList(list: List<Message>) {
             messages = list
             notifyDataSetChanged()
+        }
+
+        fun messageAt(position: Int): Message? = messages.getOrNull(position)
+
+        fun removeMessage(id: String) {
+            val index = messages.indexOfFirst { it.messageId == id }
+            if (index < 0) return
+            messages = messages.filterNot { it.messageId == id }
+            notifyItemRemoved(index)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -669,9 +860,15 @@ class MessagesFragment : Fragment() {
 
             fun bind(message: Message) {
                 tvTitle.text = message.title ?: "Accnotify"
-                tvBody.text = message.body ?: ""
+                previewMarkwon.setMarkdown(tvBody, message.body.orEmpty())
+                // 预览中的链接也由整张卡片打开详情，避免抢占列表点击。
+                tvBody.movementMethod = null
+                tvBody.isClickable = false
+                tvBody.isLongClickable = false
                 tvTime.text = dateFormat.format(message.timestamp)
                 
+                val thumbnailRequest = message.messageId + ":" + message.image.orEmpty()
+                ivThumbnail.tag = thumbnailRequest
                 // Show thumbnail if image exists
                 if (!message.image.isNullOrEmpty()) {
                     val imageContent = message.image
@@ -704,7 +901,7 @@ class MessagesFragment : Fragment() {
                                         null
                                     }
                                 }
-                                if (bitmap != null) {
+                                if (bitmap != null && ivThumbnail.tag == thumbnailRequest) {
                                     ivThumbnail.setImageBitmap(bitmap)
                                 }
                             } catch (_: Exception) {}

@@ -6,7 +6,6 @@ import android.app.job.JobScheduler
 import android.app.job.JobService
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.util.Log
 
@@ -81,14 +80,7 @@ class KeepAliveJobService : JobService() {
         
         // Start WebSocket service
         try {
-            val intent = Intent(this, WebSocketService::class.java).apply {
-                action = WebSocketService.ACTION_CONNECT
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
+            WebSocketService.start(this)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start WebSocket service from job", e)
         }

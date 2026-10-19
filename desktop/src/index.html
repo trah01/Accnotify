@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data: blob:; connect-src ipc: http://ipc.localhost; base-uri 'none'; form-action 'none'">
+  <title>Accnotify</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="bridge.js" defer></script>
+  <script src="vendor/marked.js" defer></script>
+  <script src="vendor/purify.js" defer></script>
+  <script src="message-view.js" defer></script>
+  <script src="features.js" defer></script>
+  <script src="renderer.js" defer></script>
+</head>
+<body>
+  <aside>
+    <div class="brand" data-tauri-drag-region>Accnotify</div>
+    <nav aria-label="主导航">
+      <button id="history-tab" class="nav selected" aria-current="page">历史消息</button>
+      <button id="settings-tab" class="nav">设置</button>
+      <button id="about-tab" class="nav">关于</button>
+    </nav>
+    <div class="connection" aria-label="连接状态"><span id="connection" role="status" aria-live="polite">未连接</span><div id="service-feedback" role="status" aria-live="polite" hidden></div><button id="connect">连接 / 同步</button></div>
+  </aside>
+  <main>
+    <div id="feedback" role="status" aria-live="polite" hidden></div>
+    <section id="history-page">
+      <header data-tauri-drag-region><h1 data-tauri-drag-region>历史消息</h1><div class="history-tools"><select id="group-filter" aria-label="筛选消息分组"><option value="">全部分组</option></select><input id="search" type="search" placeholder="搜索消息" aria-label="搜索消息"><button id="clear-messages">清空</button></div></header>
+      <div class="messages-layout">
+        <div class="message-column"><div id="messages" role="list"></div><button id="more" hidden>显示更多</button></div>
+        <article id="detail"><p class="empty">选择一条消息查看内容</p></article>
+      </div>
+    </section>
+    <section id="settings-page" hidden>
+      <header data-tauri-drag-region><h1 data-tauri-drag-region>设置</h1><button id="save" class="primary">保存</button></header>
+      <div class="settings-body">
+        <section class="settings-card" aria-labelledby="settings-group-1"><h2 id="settings-group-1">服务器与设备</h2>
+          <label>服务器<select id="server"></select></label>
+          <div class="actions"><button id="add-server">添加服务器</button><button id="edit-server">编辑</button><button id="delete-server">删除</button></div>
+          <label>电脑名称<input id="name" maxlength="256" autocomplete="off"></label>
+          <div class="actions"><button id="common-info">通用信息设置</button></div>
+          <div class="identity-row"><div><span class="label">推送 ID</span><code id="device-id"></code><span id="binding-state" class="muted"></span></div><div class="actions"><button id="copy">复制 Push 链接</button><button id="copy-webhook">复制 Webhook</button><button id="copy-key">复制 Key</button></div></div>
+          <div class="actions"><label class="check"><input id="reuse-common-id" type="checkbox">复用公用 ID</label><button id="apply-id">应用 ID</button><button id="regenerate-id">重新生成独立 ID</button></div>
+          <div class="identity-row"><div><span class="label">本机设备标识</span><code id="endpoint-id"></code></div><div class="actions"><button id="copy-target">复制本机 Push 链接</button><button id="copy-endpoint">复制设备标识</button></div></div>
+          <div id="device-list"></div>
+          <label class="check"><input id="auto-start" type="checkbox">开机启动</label>
+          <details class="advanced-settings"><summary>设备操作</summary><div class="actions"><button id="reset-rsa">仅重置 RSA 密钥</button><button id="reset-all">重置 ID 和 RSA 密钥</button><button id="unregister">注销设备</button></div><p id="reset-status" class="muted" role="status"></p></details>
+        </section>
+        <section class="settings-card" aria-labelledby="settings-group-2"><h2 id="settings-group-2">绑定已有 ID</h2>
+          <label>已有设备的 Push 链接<input id="phone-link" type="url" spellcheck="false" autocomplete="off" placeholder="粘贴同一服务器上的已有设备的 Push 链接"></label>
+          <div class="actions"><button id="send-code">发送绑定验证码</button><span id="binding-hint" class="muted" role="status"></span></div>
+          <div class="code-row"><label>验证码<input id="code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code"></label><button id="verify" class="primary">确认绑定</button><button id="cancel-bind">取消绑定请求</button></div>
+          <button id="unbind" hidden>解除绑定</button>
+        </section>
+        <section class="settings-card" aria-labelledby="settings-group-3"><h2 id="settings-group-3">消息提醒</h2>
+          <label class="check"><input id="enabled" type="checkbox">显示消息通知</label>
+          <p class="muted">关闭提醒或处于静默时间时，消息仍保存到历史。</p>
+          <details class="advanced-settings">
+            <summary>高级设置</summary>
+            <div class="advanced-settings-body">
+              <label class="check"><input id="scheduled" type="checkbox">仅在指定日期和时段提醒</label>
+              <label class="check"><input id="workdays" type="checkbox">仅工作日（包含调休上班日）</label>
+              <div id="weekdays" class="weekdays" aria-label="提醒日期"></div>
+              <div class="time-row"><label>提醒开始<input id="start" type="time" required></label><label>提醒结束<input id="end" type="time" required></label></div>
+              <label class="check"><input id="quiet" type="checkbox">启用每日静默时段</label>
+              <div class="time-row"><label>静默开始<input id="silent-start" type="time" required></label><label>静默结束<input id="silent-end" type="time" required></label></div>
+              <p class="muted">结束早于开始表示跨午夜；开始与结束相同表示全天。</p>
+              <label class="check"><input id="holidays" type="checkbox">节假日静默</label>
+              <div class="actions"><button id="fetch-calendar">获取本年度节假日</button><button id="import-calendar">导入本地日历</button></div>
+              <p id="calendar-status" class="muted"></p>
+              <label>自定义静默日期<textarea id="silent-dates" rows="2" placeholder="YYYY-MM-DD，多个日期用逗号或换行分隔"></textarea></label>
+              <label>自定义上班日期<textarea id="working-dates" rows="2" placeholder="YYYY-MM-DD，多个日期用逗号或换行分隔"></textarea></label>
+            </div>
+          </details>
+        </section>
+        <section class="settings-card" aria-labelledby="settings-group-4"><h2 id="settings-group-4">发送端加密</h2>
+          <label class="check"><input id="reuse-common-key" type="checkbox">复用公用密钥</label>
+          <label>加密密钥<input id="sender-key" type="password" autocomplete="off" spellcheck="false" maxlength="64" placeholder="64 位十六进制字符，留空保留已保存的密钥"></label>
+          <div class="actions"><button id="save-key">保存密钥</button><button id="generate-key">生成密钥</button><button id="view-key">查看 / 复制已保存密钥</button><button id="clear-key">清除密钥</button><span id="key-state" class="muted"></span></div>
+        </section>
+        <section class="settings-card" aria-labelledby="settings-group-5"><h2 id="settings-group-5">外观</h2><label>显示模式<select id="theme-mode"><option value="system">跟随系统</option><option value="light">亮色</option><option value="dark">暗色</option></select></label><label>主题色<select id="theme-color"><option value="white">白色</option><option value="blue">蓝色</option><option value="green">绿色</option><option value="red">红色</option><option value="pink">粉色</option><option value="black">深色</option></select></label></section>
+      </div>
+    </section>
+    <section id="about-page" hidden>
+      <header data-tauri-drag-region><h1 data-tauri-drag-region>关于</h1><button id="check-updates">检查更新</button></header>
+      <div class="settings-body about-body">
+        <dl class="about-info">
+          <dt>应用</dt><dd>Accnotify</dd>
+          <dt>版本</dt><dd id="app-version"></dd>
+          <dt>系统</dt><dd id="app-platform"></dd>
+        </dl>
+        <div class="actions"><button id="open-project">项目主页</button><button id="open-releases">发布页面</button><button id="open-help">使用教程</button><button id="open-privacy">隐私说明</button></div>
+        <p id="update-status" class="muted" role="status" aria-live="polite"></p>
+        <button id="download-update" hidden>前往下载</button>
+      </div>
+    </section>
+    <dialog id="server-dialog" aria-labelledby="server-title"><form method="dialog">
+      <div class="dialog-heading"><h2 id="server-title">添加服务器</h2><button value="cancel" formnovalidate>关闭</button></div>
+      <label>服务器地址<input id="server-url" type="url" required placeholder="https://example.com" spellcheck="false"></label>
+      <label class="check"><input id="server-reuse-id" type="checkbox">复用公用 ID</label>
+      <label class="check"><input id="server-reuse-key" type="checkbox">复用公用密钥</label>
+      <p id="server-error" class="dialog-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button value="cancel" formnovalidate>取消</button><button type="button" id="save-server" class="primary">保存</button></div>
+    </form></dialog>
+    <dialog id="saved-key-dialog" aria-labelledby="saved-key-title"><form method="dialog"><div class="dialog-heading"><h2 id="saved-key-title">当前服务器密钥</h2><button>关闭</button></div><label>已保存密钥<input id="saved-key" type="password" readonly autocomplete="off"></label><div class="actions"><button type="button" id="show-saved-key" aria-pressed="false">显示密钥</button><button type="button" id="copy-saved-key">复制密钥</button></div><p id="saved-key-status" class="muted" role="status"></p></form></dialog>
+    <dialog id="help-dialog" aria-labelledby="help-title"><form method="dialog"><div class="dialog-heading"><h2 id="help-title">使用教程</h2><button>关闭</button></div></form><div id="help-content" class="message-body"></div><div id="test-push-form" hidden><label>测试消息 JSON<textarea id="test-payload" rows="5" spellcheck="false">{"title":"测试消息","body":"连接成功"}</textarea></label><button id="send-test-push">发送测试消息</button><p id="test-push-status" role="status" class="muted"></p></div></dialog>
+    <dialog id="common-dialog" aria-labelledby="common-title">
+      <form method="dialog" id="common-form">
+        <div class="dialog-heading"><h2 id="common-title">通用信息设置</h2><button value="cancel" formnovalidate>关闭</button></div>
+        <p class="muted">公用密钥供本机不同服务器复用。修改公用 ID 不会替换已保存的服务器 ID。</p>
+        <label>公用 ID<input id="common-id" readonly spellcheck="false"></label>
+        <div class="actions"><button id="copy-common-id" type="button">复制 ID</button><button id="generate-common-id" type="button">生成新 ID</button></div>
+        <label>公用密钥<input id="common-key" type="password" autocomplete="off" spellcheck="false" maxlength="64" required></label>
+        <div class="actions"><button id="copy-common-key" type="button">复制密钥</button><button id="generate-common-key" type="button">生成新密钥</button><button id="show-common-key" type="button" aria-pressed="false">显示密钥</button></div>
+        <p id="common-status" class="muted" role="status" aria-live="polite"></p>
+        <p id="common-error" class="dialog-error" role="alert" hidden></p>
+        <div class="dialog-actions"><button value="cancel" formnovalidate>取消</button><button id="save-common" type="button" class="primary">保存</button></div>
+      </form>
+    </dialog>
+  </main>
+</body>
+</html>

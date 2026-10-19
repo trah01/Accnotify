@@ -1,0 +1,194 @@
+name: Client packages
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: client-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  version:
+    if: github.event_name == 'push' || github.event.label.name == 'build-test'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check version and release tag
+        id: version
+        env:
+          RELEASE_BUILD: ${{ github.event_name == 'push' }}
+        run: |
+          node scripts/sync-version.mjs --check
+          version="$(cat VERSION | tr -d '\r\n')"
+          if [[ "$RELEASE_BUILD" == 'true' && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo 'Release tag must match VERSION (v<version>)' >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  android:
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      RELEASE_BUILD: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Prepare release signing
+        if: github.event_name == 'push'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing Android signing secret: $name" >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/accnotify.keystore"
+      - name: Build APK
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/accnotify.keystore
+          RELEASE_STORE_PASSWORD: ${{ github.event_name == 'push' && secrets.ANDROID_STORE_PASSWORD || '' }}
+          RELEASE_KEY_ALIAS: ${{ github.event_name == 'push' && secrets.ANDROID_KEY_ALIAS || '' }}
+          RELEASE_KEY_PASSWORD: ${{ github.event_name == 'push' && secrets.ANDROID_KEY_PASSWORD || '' }}
+          CLIENT_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          mkdir -p release-assets
+          if [[ "$RELEASE_BUILD" == 'true' ]]; then
+            gradle --no-daemon :app:assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk "release-assets/Accnotify-${CLIENT_VERSION}-android.apk"
+          else
+            gradle --no-daemon :app:assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "release-assets/Accnotify-${CLIENT_VERSION}-android-debug.apk"
+          fi
+      - name: Remove signing file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/accnotify.keystore"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-android
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+
+  desktop:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: aarch64-apple-darwin
+            platform: macos-aarch64
+            script: package:mac
+            bundle: dmg
+          - os: macos-15
+            target: x86_64-apple-darwin
+            platform: macos-x86_64
+            script: package:mac
+            bundle: dmg
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: windows-x86_64
+            script: package:win
+            bundle: nsis
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+          key: ${{ matrix.target }}
+          save-if: ${{ github.event_name == 'push' }}
+      - run: npm ci
+        working-directory: desktop
+      - name: Build desktop installer
+        working-directory: desktop
+        run: npm run ${{ matrix.script }} -- --target ${{ matrix.target }}
+      - name: Collect installer
+        env:
+          CLIENT_VERSION: ${{ needs.version.outputs.version }}
+          CLIENT_PLATFORM: ${{ matrix.platform }}
+          BUNDLE_PATH: desktop/src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.bundle }}
+        run: |
+          mkdir -p release-assets
+          shopt -s nullglob
+          installers=("$BUNDLE_PATH"/*.dmg "$BUNDLE_PATH"/*.exe)
+          if [[ ${#installers[@]} != 1 ]]; then
+            echo 'Expected exactly one desktop installer' >&2
+            exit 1
+          fi
+          installer="${installers[0]}"
+          cp "$installer" "release-assets/Accnotify-${CLIENT_VERSION}-${CLIENT_PLATFORM}.${installer##*.}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-${{ matrix.platform }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    if: github.event_name == 'push'
+    needs: [version, android, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: client-*
+          merge-multiple: true
+          path: release-assets
+      - name: Publish installers to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CLIENT_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          tag="v$CLIENT_VERSION"
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --verify-tag --title "$tag" --generate-notes --draft
+          fi
+          gh release upload "$tag" release-assets/* --clobber
+          gh release edit "$tag" --draft=false

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/accnotify/server/model"
 	"github.com/accnotify/server/storage"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -25,6 +25,55 @@ type Client struct {
 	send      chan []byte
 	deviceKey string
 	deviceID  int64
+	done      chan struct{}
+	initDone  sync.Once
+	stopOnce  sync.Once
+}
+
+// The send queue stays open; disconnect closes only done so replay cannot send
+// into a closed channel. Unacknowledged messages remain in storage.
+func (c *Client) doneChannel() <-chan struct{} {
+	c.initDone.Do(func() { c.done = make(chan struct{}) })
+	return c.done
+}
+
+func (c *Client) disconnect() {
+	c.doneChannel()
+	c.stopOnce.Do(func() {
+		close(c.done)
+		if c.conn != nil {
+			c.conn.Close()
+		}
+	})
+}
+
+func (c *Client) enqueue(data []byte, wait bool) bool {
+	done := c.doneChannel()
+	select {
+	case <-done:
+		return false
+	default:
+	}
+	if !wait {
+		select {
+		case <-done:
+			return false
+		case c.send <- data:
+			return true
+		default:
+			return false
+		}
+	}
+	timer := time.NewTimer(writeWait)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return false
+	case c.send <- data:
+		return true
+	case <-timer.C:
+		return false
+	}
 }
 
 // Hub manages all WebSocket connections
@@ -32,15 +81,8 @@ type Hub struct {
 	clients    map[string]*Client // deviceKey -> Client
 	register   chan *Client
 	unregister chan *Client
-	broadcast  chan *BroadcastMessage
 	storage    *storage.SQLiteStorage
 	mu         sync.RWMutex
-}
-
-// BroadcastMessage represents a message to be sent to a specific device
-type BroadcastMessage struct {
-	DeviceKey string
-	Message   []byte
 }
 
 // NewHub creates a new WebSocket hub
@@ -49,7 +91,6 @@ func NewHub(storage *storage.SQLiteStorage) *Hub {
 		clients:    make(map[string]*Client),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		broadcast:  make(chan *BroadcastMessage, 256),
 		storage:    storage,
 	}
 }
@@ -60,14 +101,19 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.mu.Lock()
+			device, err := h.storage.GetDeviceByKey(client.deviceKey)
+			if err != nil || device == nil || device.ID != client.deviceID {
+				client.disconnect()
+				h.mu.Unlock()
+				continue
+			}
 			// Close existing connection if any
 			if existing, ok := h.clients[client.deviceKey]; ok {
-				close(existing.send)
-				existing.conn.Close()
+				existing.disconnect()
 			}
 			h.clients[client.deviceKey] = client
 			h.mu.Unlock()
-			log.Printf("Client registered: %s", client.deviceKey)
+			log.Printf("Client registered: device_id=%d", client.deviceID)
 
 			// Send undelivered messages
 			go h.sendUndeliveredMessages(client)
@@ -76,28 +122,21 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			if existing, ok := h.clients[client.deviceKey]; ok && existing == client {
 				delete(h.clients, client.deviceKey)
-				close(client.send)
+				client.disconnect()
 			}
 			h.mu.Unlock()
-			log.Printf("Client unregistered: %s", client.deviceKey)
+			log.Printf("Client unregistered: device_id=%d", client.deviceID)
 
-		case msg := <-h.broadcast:
-			h.mu.RLock()
-			if client, ok := h.clients[msg.DeviceKey]; ok {
-				select {
-				case client.send <- msg.Message:
-				default:
-					// Client buffer full, disconnect
-					h.mu.RUnlock()
-					h.mu.Lock()
-					delete(h.clients, msg.DeviceKey)
-					close(client.send)
-					h.mu.Unlock()
-					continue
-				}
-			}
-			h.mu.RUnlock()
 		}
+	}
+}
+
+func (h *Hub) DisconnectDevice(deviceKey string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if client := h.clients[deviceKey]; client != nil {
+		delete(h.clients, deviceKey)
+		client.disconnect()
 	}
 }
 
@@ -109,31 +148,37 @@ func (h *Hub) sendUndeliveredMessages(client *Client) {
 		return
 	}
 
+	if len(messages) == 0 {
+		return
+	}
+	device, err := h.storage.GetDeviceByKey(client.deviceKey)
+	if err != nil || device == nil {
+		return
+	}
 	for _, msg := range messages {
-		wsMsg := model.WSMessage{
-			Type:      model.WSTypeMessage,
-			ID:        msg.MessageID,
-			Timestamp: msg.CreatedAt.Unix(),
-			Data: map[string]interface{}{
-				"title":             msg.Title,
-				"body":              msg.Body,
-				"group":             msg.Group,
-				"icon":              msg.Icon,
-				"url":               msg.URL,
-				"sound":             msg.Sound,
-				"badge":             msg.Badge,
-				"encrypted_content": string(msg.EncryptedPayload),
-			},
+		if time.Since(msg.CreatedAt) >= storage.MessageRetention {
+			continue
 		}
+		// Re-encrypt stored fields with the current Android-compatible parameters
+		// and registered key, including ciphertext queued by earlier server versions.
+		select {
+		case <-client.doneChannel():
+			return
+		default:
+		}
+		if err := encryptDeviceMessage(device, msg); err != nil {
+			log.Printf("Unable to encrypt queued message %s", msg.MessageID)
+			return
+		}
+		wsMsg := encryptedWSMessage(msg)
 
 		data, err := json.Marshal(wsMsg)
 		if err != nil {
 			continue
 		}
 
-		select {
-		case client.send <- data:
-		default:
+		if !client.enqueue(data, true) {
+			client.disconnect()
 			return
 		}
 	}
@@ -147,20 +192,25 @@ func (h *Hub) SendToDevice(deviceKey string, msg *model.WSMessage) bool {
 	}
 
 	h.mu.RLock()
-	_, online := h.clients[deviceKey]
+	client := h.clients[deviceKey]
 	h.mu.RUnlock()
-
-	if online {
-		h.broadcast <- &BroadcastMessage{
-			DeviceKey: deviceKey,
-			Message:   data,
-		}
+	if client == nil {
+		return false
 	}
-
-	return online
+	if !client.enqueue(data, false) {
+		client.disconnect()
+		return false
+	}
+	return true
 }
 
 // IsOnline checks if a device is currently connected
+func (h *Hub) OnlineCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.clients)
+}
+
 func (h *Hub) IsOnline(deviceKey string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -172,7 +222,7 @@ func (h *Hub) IsOnline(deviceKey string) bool {
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		c.conn.Close()
+		c.disconnect()
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
@@ -185,7 +235,7 @@ func (c *Client) readPump() {
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)
 			}
 			break
@@ -199,12 +249,14 @@ func (c *Client) readPump() {
 
 		switch wsMsg.Type {
 		case model.WSTypeAck:
-			// Mark message as delivered
+			// Delete the confirmed message, scoped to the receiving device.
 			if wsMsg.ID != "" {
-				c.hub.storage.MarkMessageDelivered(wsMsg.ID)
+				if err := c.hub.storage.MarkMessageDelivered(c.deviceID, wsMsg.ID); err != nil {
+					log.Printf("Unable to acknowledge message: %v", err)
+				}
 			}
 		case model.WSTypePong:
-			// Client responded to ping
+			c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		}
 	}
 }
@@ -214,17 +266,19 @@ func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		c.disconnect()
 	}()
 
 	for {
 		select {
-		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
+		case <-c.doneChannel():
+			return
+		case message := <-c.send:
+			var queued model.WSMessage
+			if json.Unmarshal(message, &queued) == nil && queued.Type == model.WSTypeMessage && queued.Timestamp > 0 && time.Since(time.Unix(queued.Timestamp, 0)) >= storage.MessageRetention {
+				continue
 			}
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {

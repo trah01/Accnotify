@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
+<androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    style="@style/Widget.Material3.CardView.Elevated"
+    style="@style/Widget.Accnotify.MessageDetailCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardBackgroundColor="?attr/colorSurface"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="8dp"
-    android:minWidth="300dp">
+    app:cardBackgroundColor="@color/message_detail_background"
+    app:cardElevation="0dp"
+    android:minWidth="260dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="@dimen/spacing_card">
 
         <!-- Title -->
         <TextView
@@ -22,19 +21,25 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="消息详情"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="18sp"
+            android:gravity="left"
+            android:textAlignment="viewStart"
+            android:textIsSelectable="true"
+            android:textColor="?attr/messageDetailTitleColor"
+            android:textSize="@dimen/text_heading"
             android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="@dimen/spacing_small" />
 
         <!-- Timestamp -->
         <TextView
             android:id="@+id/dialogTime"
+            android:gravity="left"
+            android:textAlignment="viewStart"
+            android:textIsSelectable="true"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="12sp"
-            android:layout_marginBottom="16dp" />
+            android:textColor="@color/message_detail_secondary"
+            android:textSize="@dimen/text_caption"
+            android:layout_marginBottom="@dimen/spacing_gap" />
 
         <!-- Message Body Container with constrained height -->
         <FrameLayout
@@ -47,15 +52,18 @@
                 android:layout_height="wrap_content"
                 android:fadeScrollbars="false"
                 android:scrollbars="vertical"
-                android:background="@drawable/bg_clean_input"
-                android:padding="12dp">
+                android:background="@color/message_detail_background"
+                android:paddingVertical="@dimen/spacing_small">
 
                 <TextView
                     android:id="@+id/dialogBody"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="13sp"
+                    android:textColor="@color/message_detail_text"
+                    android:textSize="@dimen/text_body"
+                    android:gravity="left"
+                    android:textAlignment="viewStart"
+                    android:textColorLink="@color/message_detail_text"
                     android:lineSpacingMultiplier="1.3"
                     android:textIsSelectable="true" />
 
@@ -67,38 +75,62 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="@dimen/spacing_gap"
             android:gravity="end"
             android:orientation="horizontal">
 
-            <!-- Copy Button -->
             <TextView
-                android:id="@+id/btnCopy"
+
+                android:paddingVertical="@dimen/control_padding_vertical"
+
+                android:minHeight="@dimen/control_height"
+                android:id="@+id/btnOpenUrl"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="wrap_content"
                 android:gravity="center"
-                android:paddingHorizontal="16dp"
-                android:text="复制"
-                android:textColor="@color/clean_primary"
-                android:textSize="14sp"
+                android:paddingHorizontal="@dimen/spacing_control"
+                android:text="打开链接"
+                android:textColor="@color/message_detail_text"
+                android:textSize="@dimen/text_control"
                 android:textStyle="bold"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="@dimen/spacing_small"
+                android:visibility="gone" />
+
+            <!-- Copy Button -->
+            <TextView
+                android:paddingVertical="@dimen/control_padding_vertical"
+                android:minHeight="@dimen/control_height"
+                android:id="@+id/btnCopy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingHorizontal="@dimen/spacing_control"
+                android:text="复制"
+                android:textColor="@color/message_detail_text"
+                android:textSize="@dimen/text_control"
+                android:textStyle="bold"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginEnd="@dimen/spacing_small" />
 
             <!-- Close Button -->
             <TextView
+                android:paddingVertical="@dimen/control_padding_vertical"
+                android:minHeight="@dimen/control_height"
                 android:id="@+id/btnClose"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="wrap_content"
                 android:gravity="center"
-                android:paddingHorizontal="20dp"
+                android:paddingHorizontal="@dimen/spacing_control"
                 android:text="关闭"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
+                android:textColor="@color/message_detail_text"
+                android:textSize="@dimen/text_control"
                 android:textStyle="bold"
-                android:background="@drawable/bg_clean_button_primary"
+                android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true" />
 
@@ -106,4 +138,4 @@
 
     </LinearLayout>
 
-</com.google.android.material.card.MaterialCardView>
+</androidx.cardview.widget.CardView>

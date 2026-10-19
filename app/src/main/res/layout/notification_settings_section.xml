@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.Accnotify.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_gap">
+
+    <LinearLayout
+        android:id="@+id/notificationSectionBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/spacing_card"
+        android:paddingTop="@dimen/spacing_small"
+        android:paddingBottom="@dimen/spacing_control" />
+</com.google.android.material.card.MaterialCardView>

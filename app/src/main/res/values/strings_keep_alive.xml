@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="keep_alive_title">保活设置</string>
+    <string name="keep_alive_step_autostart">1、打开手机设置-应用，点击自启动，允许自启动</string>
+    <string name="keep_alive_step_background">2、点击下面按钮，进入应用详情，点击耗电管理，允许完全的后台运行</string>
+    <string name="keep_alive_step_accessibility">3、点击下面按钮进入无障碍设置，选择已下载应用，找到Accnotify并启用（如无法开启，请根据系统提示，前往上一步的按钮进入应用详情，点击右上角允许）</string>
+    <string name="keep_alive_step_battery">4、点击下面按钮，点击弹出窗口的允许，加入电池白名单。</string>
+</resources>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Accnotify 管理后台</title>
+  <link rel="stylesheet" href="/admin/style.css"><script src="/admin/app.js" defer></script>
+</head>
+<body>
+  <main id="login" class="login-shell" hidden>
+    <form id="login-form" class="login-form">
+      <div class="login-brand">Accnotify <span>管理后台</span></div>
+      <label for="username">账号</label><input id="username" name="username" autocomplete="username" required value="admin">
+      <label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password" required>
+      <p id="login-error" class="error" role="alert" hidden></p>
+      <button type="submit" class="primary">登录</button>
+    </form>
+  </main>
+  <div id="app" class="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="brand">Accnotify</div>
+      <nav aria-label="后台导航">
+        <button data-view="overview" class="nav-button selected" aria-current="page">统计面板</button>
+        <button data-view="devices" class="nav-button">设备列表</button>
+        <button data-view="push" class="nav-button">消息推送</button>
+        <button data-view="logs" class="nav-button">运行日志</button>
+      </nav>
+      <div class="sidebar-foot">管理员后台</div>
+    </aside>
+    <main class="workspace">
+      <header class="toolbar"><h1 id="view-title">统计面板</h1><div class="toolbar-actions"><span class="muted">北京时间</span><span id="updated" class="muted"></span><button id="refresh">刷新</button><button id="logout" class="text-button">退出登录</button></div></header>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section id="overview" class="view">
+        <div class="stats-grid">
+          <article class="stat"><span>注册设备</span><strong id="stat-devices">—</strong></article>
+          <article class="stat"><span>当前在线</span><strong id="stat-online">—</strong></article>
+          <article class="stat"><span>今日新增设备</span><strong id="stat-new">—</strong></article>
+          <article class="stat"><span>累计推送</span><strong id="stat-messages">—</strong></article>
+          <article class="stat"><span>今日推送</span><strong id="stat-today">—</strong><small id="stat-yesterday"></small></article>
+          <article class="stat"><span>待投递消息</span><strong id="stat-pending">—</strong></article>
+        </div>
+        <div class="section-head"><h2>近 7 天</h2></div>
+        <div class="table-wrap"><table class="trend-table"><thead><tr><th>日期</th><th>推送消息</th><th>新增设备</th></tr></thead><tbody id="trend-rows"></tbody></table></div>
+        <p class="footnote">推送数量按服务端保存的消息计数，不代表用户已阅读；全局推送按接收设备分别计数。</p>
+      </section>
+      <section id="devices" class="view" hidden>
+        <form id="search-form" class="list-toolbar"><label class="sr-only" for="device-search">搜索名称、编号或设备标识</label><input id="device-search" type="search" placeholder="搜索名称、编号或设备标识"><button type="submit">搜索</button><span id="device-total" class="muted"></span></form>
+        <div class="table-wrap"><table><thead><tr><th>设备</th><th>推送 ID（末 8 位）</th><th>连接</th><th>加密公钥</th><th>注册时间</th><th>最近连接</th><th><span class="sr-only">操作</span></th></tr></thead><tbody id="device-rows"></tbody></table></div>
+        <p id="device-empty" class="empty" hidden>没有找到设备</p>
+        <div class="pagination"><label>每页 <select id="page-limit"><option>20</option><option selected>50</option><option>100</option></select> 条</label><nav id="page-buttons" aria-label="设备列表分页"></nav></div>
+      </section>
+      <section id="push" class="view" hidden>
+        <form id="push-form" class="push-form">
+          <fieldset><legend>接收范围</legend><div class="radio-row"><label><input type="radio" name="target" value="devices" checked> 指定设备</label><label><input type="radio" name="target" value="all"> 全部设备</label></div></fieldset>
+          <div id="device-selector" class="field"><label id="recipient-label">接收设备 <span id="recipient-count" class="muted">已选 0 台</span></label><div id="recipient-list" class="recipient-list" role="group" aria-labelledby="recipient-label" aria-busy="false"><div id="recipient-options"></div><button id="recipient-more" type="button" class="recipient-more">加载设备</button></div></div>
+          <div id="all-recipient" class="recipient-all" hidden></div>
+          <div class="form-grid"><div class="field"><label for="push-operation">操作</label><select id="push-operation"><option value="send">发送消息</option><option value="update">更新消息</option><option value="delete">删除消息</option></select></div><div class="field"><label for="push-id">消息 ID</label><input id="push-id" placeholder="可选，相同 ID 会替换原消息" aria-describedby="push-id-hint"><p id="push-id-hint" class="footnote" hidden></p></div></div>
+          <fieldset id="push-content">
+          <legend class="sr-only">消息内容</legend>
+          <div class="field"><label for="push-title">标题</label><input id="push-title" maxlength="200" placeholder="可选"></div>
+          <div class="field"><label for="push-format">正文格式</label><select id="push-format"><option value="body">默认</option><option value="markdown">Markdown</option></select></div>
+          <div class="field"><label for="push-body">正文</label><textarea id="push-body" rows="7" required></textarea></div>
+          <div class="form-grid"><div class="field"><label for="push-group">分组</label><select id="push-group"><option value="">普通消息</option><option value="important">重要提醒</option><option value="work">工作通知</option><option value="life">生活通知</option><option value="device">设备通知</option></select></div><div class="field"><label for="push-url">跳转链接</label><input id="push-url" type="url" placeholder="https://"></div></div>
+          <details class="extra-fields"><summary>图片</summary><div class="field"><label for="push-image">图片链接或 Base64</label><textarea id="push-image" rows="2"></textarea></div></details>
+          </fieldset>
+          <div class="form-actions"><button id="send-button" type="submit" class="primary">发送通知</button></div>
+        </form>
+        <div id="push-result" class="push-result" role="status" aria-live="polite" hidden><strong id="push-status"></strong><progress id="push-progress" max="1" value="0"></progress><p id="push-counts"></p><ul id="push-failures"></ul></div>
+      </section>
+      <section id="logs" class="view" hidden>
+        <div class="section-head log-head"><span id="log-state" class="muted">实时更新</span><div class="toolbar-actions"><button id="pause-logs">暂停</button><button id="download-logs">下载日志</button></div></div>
+        <p class="footnote">与应用标准输出内容一致，保留当前进程最近约 1 MB；重启前的历史日志请查看 docker logs。</p>
+        <pre id="log-content" class="log-content" tabindex="0" aria-label="运行日志"></pre>
+      </section>
+    </main>
+  </div>
+  <dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title">向全部设备发送通知？</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">取消</button><button id="confirm-submit" value="send" class="primary">确认发送</button></div></form></dialog>
+  <div id="boot-status" class="boot-status" role="status">正在连接后台…</div>
+</body>
+</html>

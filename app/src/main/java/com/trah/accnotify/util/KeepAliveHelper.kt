@@ -1,7 +1,6 @@
 package com.trah.accnotify.util
 
 import android.app.Activity
-import android.app.AlarmManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -110,15 +109,6 @@ object KeepAliveHelper {
     }
 
     /**
-     * Check if exact alarms are allowed
-     */
-    fun canScheduleExactAlarms(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
-        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        return am.canScheduleExactAlarms()
-    }
-
-    /**
      * Check if accessibility service is enabled
      */
     fun isAccessibilityServiceEnabled(context: Context): Boolean {
@@ -189,30 +179,6 @@ object KeepAliveHelper {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to open app settings", e)
-            false
-        }
-    }
-
-    /**
-     * Request exact alarm permission (Android 12+)
-     */
-    fun requestExactAlarmPermission(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
-        
-        if (canScheduleExactAlarms(context)) {
-            Toast.makeText(context, "✓ 已允许精确闹钟", Toast.LENGTH_SHORT).show()
-            return true
-        }
-
-        return try {
-            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                data = Uri.parse("package:${context.packageName}")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to request exact alarm permission", e)
             false
         }
     }
@@ -519,11 +485,6 @@ object KeepAliveHelper {
         val batteryOpt = if (isIgnoringBatteryOptimizations(context)) "✓ 已忽略" else "✗ 未忽略"
         sb.append("电池优化: $batteryOpt\n")
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val exactAlarm = if (canScheduleExactAlarms(context)) "✓ 已允许" else "✗ 未允许"
-            sb.append("精确闹钟: $exactAlarm\n")
-        }
-        
         return sb.toString()
     }
 
@@ -564,10 +525,6 @@ object KeepAliveHelper {
                 actions.add("允许自启动（如有）")
                 actions.add("锁定后台")
             }
-        }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            actions.add("允许精确闹钟")
         }
         
         return actions

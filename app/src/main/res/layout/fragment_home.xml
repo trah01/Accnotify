@@ -6,13 +6,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:colorBackground"
-    android:fillViewport="true">
+    android:fillViewport="true"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/spacing_page"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <!-- STATUS BAR -->
         <LinearLayout
@@ -21,14 +25,14 @@
             android:background="@drawable/bg_clean_status"
             android:backgroundTint="@color/status_clean_connected_bg"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="18dp"
+            android:paddingHorizontal="@dimen/spacing_home_card"
+            android:paddingVertical="@dimen/spacing_home_card"
             android:id="@+id/statusContainer">
 
             <ImageView
                 android:id="@+id/ivStatusIcon"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
+                android:layout_width="@dimen/icon_size"
+                android:layout_height="@dimen/icon_size"
                 android:src="@drawable/ic_fluent_wifi"
                 app:tint="@color/status_clean_connected_text" />
 
@@ -45,10 +49,10 @@
                 android:id="@+id/tvStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="@dimen/spacing_gap"
                 android:text="服务已连接"
                 android:textColor="@color/status_clean_connected_text"
-                android:textSize="15sp"
+                android:textSize="@dimen/text_body"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -56,19 +60,16 @@
 
         <!-- DEVICE IDENTITY CARD -->
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_marginTop="@dimen/spacing_gap">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="@dimen/spacing_home_card">
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -76,8 +77,8 @@
                     android:gravity="center_vertical">
 
                     <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
+                        android:layout_width="@dimen/icon_size"
+                        android:layout_height="@dimen/icon_size"
                         android:src="@drawable/ic_fluent_key"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -85,83 +86,83 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/spacing_small"
                         android:text="设备身份 (Device Identity)"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp"
+                        android:textSize="@dimen/text_caption"
                         android:textStyle="bold"
                         android:letterSpacing="0.05" />
                 </LinearLayout>
 
                 <!-- Key Box -->
+                <TextView android:id="@+id/tvEndpointId" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="同步连接后显示设备标识" android:textSize="@dimen/text_body" android:textColor="?attr/colorOnSurfaceVariant"
+                    android:minHeight="@dimen/control_height" android:gravity="center_vertical" android:clickable="true" android:focusable="true"
+                    android:background="?attr/selectableItemBackground" />
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="@dimen/spacing_small"
                     android:background="@drawable/bg_clean_input"
                     android:gravity="center_vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="14dp">
+                    android:paddingHorizontal="@dimen/spacing_control"
+                    android:paddingVertical="0dp">
 
                     <TextView
                         android:id="@+id/tvDeviceKey"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:minHeight="@dimen/action_touch_size"
+                        android:gravity="center_vertical"
+                        android:background="?attr/selectableItemBackground"
+                        android:contentDescription="选择设备 ID"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:fontFamily="monospace"
+                        android:fontFamily="sans"
                         android:text="Loading..."
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="16sp"
+                        android:textSize="@dimen/text_body"
                         android:maxLines="1"
                         android:ellipsize="middle" />
 
                     <ImageView
                         android:id="@+id/btnCopyPushUrl"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                        android:layout_width="@dimen/action_touch_size"
+                        android:layout_height="@dimen/action_touch_size"
                         android:src="@drawable/ic_fluent_copy"
                         app:tint="?attr/colorOnSurfaceVariant"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:padding="2dp"
+                        android:padding="@dimen/action_icon_padding"
+                        android:contentDescription="复制推送链接"
+                        android:focusable="true"
                         android:clickable="true" />
                         
-                    <ImageView
-                        android:id="@+id/btnRefreshKey"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="16dp"
-                        android:src="@drawable/ic_fluent_refresh"
-                        app:tint="?attr/colorOnSurfaceVariant"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:clickable="true" />
-
                 </LinearLayout>
 
                 <TextView
+                    android:id="@+id/tvDeviceKeyHint"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="此密钥用于向您的设备发送加密推送消息。"
+                    android:layout_marginTop="@dimen/spacing_small"
+                    android:text="此 ID 用于接收推送消息，点击上方 ID 可切换。"
                     android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="12sp" />
+                    android:textSize="@dimen/text_caption" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <!-- SERVER CONFIG CARD -->
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_marginTop="@dimen/spacing_gap">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="@dimen/spacing_home_card">
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -169,8 +170,8 @@
                     android:gravity="center_vertical">
 
                     <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
+                        android:layout_width="@dimen/icon_size"
+                        android:layout_height="@dimen/icon_size"
                         android:src="@drawable/ic_fluent_cloud"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -178,10 +179,10 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/spacing_small"
                         android:text="当前服务器"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp"
+                        android:textSize="@dimen/text_caption"
                         android:textStyle="bold"
                         android:letterSpacing="0.05" />
                 </LinearLayout>
@@ -190,20 +191,22 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="@dimen/spacing_gap"
                     android:background="@drawable/bg_clean_input"
                     android:gravity="center_vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="14dp">
+                    android:paddingHorizontal="@dimen/spacing_home_card"
+                    android:paddingVertical="@dimen/spacing_control">
 
                     <TextView
                         android:id="@+id/tvServerUrl"
+                        android:minHeight="32dp"
+                        android:gravity="center_vertical"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="https://an.trah.cn"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="14sp" />
+                        android:textSize="@dimen/text_body" />
                     
                     <View
                         android:layout_width="8dp"
@@ -214,47 +217,73 @@
                 </LinearLayout>
 
                 <TextView
+
+                    android:paddingVertical="@dimen/control_padding_vertical"
+
+                    android:minHeight="@dimen/control_height"
                     android:id="@+id/btnRegister"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_gap"
                     android:background="@drawable/bg_clean_button_primary"
                     android:gravity="center"
                     android:text="注册设备 / 同步连接"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/action_button_text"
                     android:textStyle="bold"
-                    android:textSize="14sp" 
+                    android:textSize="@dimen/text_control"
                     android:clickable="true"
                     android:focusable="true"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.Accnotify.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_gap">
+            <TextView
+                android:id="@+id/btnSenderEncryption"
+                android:drawableStart="@drawable/ic_fluent_key"
+                android:drawableTint="?attr/colorOnSurfaceVariant"
+                android:drawablePadding="12dp"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/control_height"
+                android:padding="@dimen/spacing_home_card"
+                android:text="发送端加密密钥 · 未配置"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="@dimen/text_control"
+                android:background="?attr/selectableItemBackground" />
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- LEARN HOW TO USE CARD -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardTutorial"
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
+            android:stateListAnimator="@null"
+            android:translationZ="0dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_marginTop="@dimen/spacing_gap">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground"
-                android:padding="20dp">
+                android:padding="@dimen/spacing_home_card">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="@drawable/bg_clean_input">
                      <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                        android:layout_width="@dimen/icon_size"
+                        android:layout_height="@dimen/icon_size"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_fluent_book"
                         app:tint="?attr/colorOnSurface" />
@@ -264,7 +293,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="16dp"
+                    android:layout_marginStart="@dimen/spacing_gap"
                     android:orientation="vertical">
                     <TextView
                         android:layout_width="wrap_content"
@@ -272,18 +301,18 @@
                         android:text="学习怎么用"
                         android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold"
-                        android:textSize="15sp" />
+                        android:textSize="@dimen/text_body" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="了解如何发送推送消息"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp" />
+                        android:textSize="@dimen/text_caption" />
                 </LinearLayout>
                 
                 <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
+                    android:layout_width="@dimen/icon_chevron_size"
+                    android:layout_height="@dimen/icon_chevron_size"
                     android:src="@drawable/ic_fluent_chevron_right"
                     app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -293,29 +322,26 @@
         <!-- SYSTEM PERMISSIONS CARD -->
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_marginTop="@dimen/spacing_gap">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="@dimen/spacing_home_card">
                 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginBottom="@dimen/spacing_gap">
 
                     <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
+                        android:layout_width="@dimen/icon_size"
+                        android:layout_height="@dimen/icon_size"
                         android:src="@drawable/ic_fluent_settings"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -323,147 +349,32 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/spacing_small"
                         android:text="系统权限"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp"
+                        android:textSize="@dimen/text_caption"
                         android:textStyle="bold"
                         android:letterSpacing="0.05" />
                 </LinearLayout>
-
-                <!-- Accessibility Row -->
                 <LinearLayout
-                    android:id="@+id/cardAccessibility"
+                    android:id="@+id/cardKeepAliveSettings"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:background="?attr/selectableItemBackground"
-                    android:paddingVertical="12dp">
-                    
-                    <FrameLayout
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/bg_clean_input">
-                         <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_fluent_settings"
-                            app:tint="?attr/colorOnSurface" />
-
-                    </FrameLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="16dp"
-                        android:orientation="vertical">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="辅助功能（核心权限）"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold"
-                            android:textSize="14sp" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="增强后台稳定性和消息处理"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-                    
-                    <ImageView
-                        android:id="@+id/btnOpenAccessibility"
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_fluent_chevron_right"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-
-                </LinearLayout>
-                
-                <View 
-                    android:layout_width="match_parent" 
-                    android:layout_height="1dp"
-                    android:background="@color/clean_divider"
-                    android:layout_marginVertical="8dp"/>
-
-                <LinearLayout
-                    android:id="@+id/cardAutoStart"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:background="?attr/selectableItemBackground"
-                    android:paddingVertical="12dp">
-                    
-                    <FrameLayout
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/bg_clean_input">
-                         <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_fluent_power"
-                            app:tint="?attr/colorOnSurface" />
-
-                    </FrameLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="16dp"
-                        android:orientation="vertical">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="电池优化"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold"
-                            android:textSize="14sp" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="加入白名单，提升后台存活率"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="12sp" />
-
-                    </LinearLayout>
-                    
-                    <ImageView
-                        android:id="@+id/btnOpenAutoStart"
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_fluent_chevron_right"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-
-                </LinearLayout>
-
-                <View 
-                    android:layout_width="match_parent" 
-                    android:layout_height="1dp"
-                    android:background="@color/clean_divider"
-                    android:layout_marginVertical="8dp"/>
-
-                <LinearLayout
-                    android:id="@+id/cardAppSettings"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:background="?attr/selectableItemBackground"
-                    android:paddingVertical="12dp">
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="@dimen/spacing_control">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:background="@drawable/bg_clean_input">
                         <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
+                            android:layout_width="@dimen/icon_size"
+                            android:layout_height="@dimen/icon_size"
                             android:layout_gravity="center"
-                            android:src="@drawable/ic_fluent_settings"
+                            android:src="@drawable/ic_fluent_power"
                             app:tint="?attr/colorOnSurface" />
                     </FrameLayout>
 
@@ -471,26 +382,26 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginStart="16dp"
+                        android:layout_marginStart="@dimen/spacing_gap"
                         android:orientation="vertical">
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="应用设置"
+                            android:text="保活设置"
                             android:textColor="?attr/colorOnSurface"
                             android:textStyle="bold"
-                            android:textSize="14sp" />
+                            android:textSize="@dimen/text_body" />
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="开启允许后台活动、自启动等完整权限"
+                            android:text="@string/keep_alive_restricted_settings_hint"
                             android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="12sp" />
+                            android:textSize="@dimen/text_caption" />
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:layout_width="@dimen/icon_chevron_size"
+                        android:layout_height="@dimen/icon_chevron_size"
                         android:src="@drawable/ic_fluent_chevron_right"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -500,7 +411,7 @@
                     android:layout_width="match_parent" 
                     android:layout_height="1dp"
                     android:background="@color/clean_divider"
-                    android:layout_marginVertical="8dp"/>
+                    android:layout_marginVertical="@dimen/spacing_small"/>
 
                 <LinearLayout
                     android:id="@+id/cardNotificationPermission"
@@ -508,7 +419,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:background="?attr/selectableItemBackground"
-                    android:paddingVertical="12dp">
+                    android:paddingVertical="@dimen/spacing_control">
 
                     <FrameLayout
                         android:layout_width="40dp"
@@ -526,7 +437,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginStart="16dp"
+                        android:layout_marginStart="@dimen/spacing_gap"
                         android:orientation="vertical">
                         <TextView
                             android:layout_width="wrap_content"
@@ -534,18 +445,18 @@
                             android:text="通知权限"
                             android:textColor="?attr/colorOnSurface"
                             android:textStyle="bold"
-                            android:textSize="14sp" />
+                            android:textSize="@dimen/text_body" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="确保消息可以正常弹出提醒"
                             android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="12sp" />
+                            android:textSize="@dimen/text_caption" />
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:layout_width="@dimen/icon_chevron_size"
+                        android:layout_height="@dimen/icon_chevron_size"
                         android:src="@drawable/ic_fluent_chevron_right"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -562,11 +473,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="@dimen/spacing_section"
             android:text="隐私政策与条款"
             android:textColor="@color/clean_text_secondary"
-            android:textSize="12sp"
-            android:padding="8dp" />
+            android:textSize="@dimen/text_caption"
+            android:padding="@dimen/spacing_small" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

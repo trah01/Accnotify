@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.Accnotify.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_card">
+
+        <TextView
+            android:id="@+id/dialogTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/spacing_small"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="@dimen/text_dialog_title"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:id="@+id/dialogCustomContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+
+            android:paddingVertical="@dimen/control_padding_vertical"
+
+            android:minHeight="@dimen/control_height"
+            android:id="@+id/btnNegative"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/action_touch_size"
+            android:layout_gravity="end"
+            android:layout_marginTop="@dimen/spacing_small"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingHorizontal="@dimen/spacing_control"
+            android:text="关闭"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="@dimen/text_control"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

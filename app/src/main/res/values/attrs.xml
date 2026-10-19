@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="messageDetailTitleColor" format="color" />
+    <attr name="actionButtonBackgroundColor" format="color" />
+    <attr name="actionButtonTextColor" format="color" />
+    <attr name="actionButtonStrokeColor" format="color" />
+    <attr name="inputBackgroundColor" format="color" />
+</resources>

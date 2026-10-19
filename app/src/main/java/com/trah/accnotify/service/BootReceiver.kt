@@ -3,7 +3,7 @@ package com.trah.accnotify.service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.util.Log
 import com.trah.accnotify.AccnotifyApp
 
 class BootReceiver : BroadcastReceiver() {
@@ -21,14 +21,10 @@ class BootReceiver : BroadcastReceiver() {
             }
 
             // Start WebSocket service after boot
-            val serviceIntent = Intent(context, WebSocketService::class.java).apply {
-                action = WebSocketService.ACTION_CONNECT
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
+            try {
+                WebSocketService.start(context)
+            } catch (e: Exception) {
+                Log.e("BootReceiver", "Failed to start WebSocket service after boot", e)
             }
         }
     }

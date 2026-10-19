@@ -4,23 +4,27 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:colorBackground"
-    android:fillViewport="true">
+    android:fillViewport="true"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/spacing_page"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="设置"
-            android:textSize="32sp"
+            android:textSize="@dimen/text_heading"
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurface"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginTop="@dimen/spacing_small"
+            android:layout_marginBottom="@dimen/spacing_gap" />
 
         <!-- Server Management -->
         <TextView
@@ -28,23 +32,20 @@
             android:layout_height="wrap_content"
             android:text="服务器配置"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="18sp"
+            android:textSize="@dimen/text_heading"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="@dimen/spacing_gap" />
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/spacing_card">
 
                 <LinearLayout
                     android:id="@+id/serverListContainer"
@@ -53,11 +54,18 @@
                     android:orientation="vertical" />
 
                 <TextView
+
+                    android:paddingVertical="@dimen/control_padding_vertical"
+
+                    android:minHeight="@dimen/control_height"
+
+                    android:textSize="@dimen/text_control"
                     android:id="@+id/btnAddServer"
                     android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_clean_input"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_gap"
+                    android:background="@drawable/bg_server_add"
+                    android:foreground="?attr/selectableItemBackground"
                     android:gravity="center"
                     android:text="+ 添加服务器"
                     android:textColor="?attr/colorPrimary"
@@ -67,37 +75,57 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.Accnotify.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_gap">
+            <TextView
+                android:id="@+id/btnCommonInfo"
+                android:drawableStart="@drawable/ic_fluent_key"
+                android:drawableTint="?attr/colorOnSurfaceVariant"
+                android:drawablePadding="12dp"
+                android:gravity="center_vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/control_height"
+                android:padding="@dimen/spacing_card"
+                android:text="通用信息设置"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="@dimen/text_option_title"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true" />
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Service Settings -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:layout_marginBottom="@dimen/spacing_gap"
             android:text="服务设置"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="18sp"
+            android:textSize="@dimen/text_heading"
             android:textStyle="bold" />
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/spacing_card">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:padding="8dp">
+                    android:padding="@dimen/spacing_small">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -110,7 +138,7 @@
                             android:layout_height="wrap_content"
                             android:text="前台常驻通知"
                             android:textColor="?attr/colorOnSurface"
-                            android:textSize="16sp"
+                            android:textSize="@dimen/text_option_title"
                             android:textStyle="bold" />
 
                         <TextView
@@ -119,7 +147,7 @@
                             android:layout_marginTop="4dp"
                             android:text="在通知栏显示常驻通知，可提升服务保活能力(不一定有效，不推荐也不阻拦）"
                             android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="13sp" />
+                            android:textSize="@dimen/text_body" />
 
                     </LinearLayout>
 
@@ -127,7 +155,7 @@
                         android:id="@+id/switchForegroundNotification"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp" />
+                        android:layout_marginStart="@dimen/spacing_small" />
 
                 </LinearLayout>
 
@@ -139,35 +167,32 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:layout_marginBottom="@dimen/spacing_gap"
             android:text="外观设置"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="18sp"
+            android:textSize="@dimen/text_heading"
             android:textStyle="bold" />
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/spacing_card">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="显示模式"
                     android:textColor="?attr/colorOnSurface"
-                    android:textSize="16sp"
+                    android:textSize="@dimen/text_option_title"
                     android:textStyle="bold"
-                    android:layout_marginBottom="10dp" />
+                    android:layout_marginBottom="@dimen/spacing_small" />
 
                 <RadioGroup
                     android:id="@+id/themeModeGroup"
@@ -177,6 +202,12 @@
                     android:saveEnabled="false">
 
                     <RadioButton
+
+                        android:paddingVertical="@dimen/control_padding_vertical"
+
+                        android:minHeight="@dimen/control_height"
+
+                        android:textSize="@dimen/text_control"
                         android:id="@+id/radioFollowSystem"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -184,6 +215,12 @@
                         android:textColor="?attr/colorOnSurface" />
 
                     <RadioButton
+
+                        android:paddingVertical="@dimen/control_padding_vertical"
+
+                        android:minHeight="@dimen/control_height"
+
+                        android:textSize="@dimen/text_control"
                         android:id="@+id/radioLightMode"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -191,6 +228,12 @@
                         android:textColor="?attr/colorOnSurface" />
 
                     <RadioButton
+
+                        android:paddingVertical="@dimen/control_padding_vertical"
+
+                        android:minHeight="@dimen/control_height"
+
+                        android:textSize="@dimen/text_control"
                         android:id="@+id/radioDarkMode"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -203,10 +246,10 @@
                     android:layout_height="wrap_content"
                     android:text="主题色"
                     android:textColor="?attr/colorOnSurface"
-                    android:textSize="16sp"
+                    android:textSize="@dimen/text_option_title"
                     android:textStyle="bold"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginTop="@dimen/spacing_gap"
+                    android:layout_marginBottom="@dimen/spacing_gap" />
 
                 <LinearLayout
                     android:id="@+id/themeColorContainer"
@@ -223,24 +266,20 @@
         </com.google.android.material.card.MaterialCardView>
 
 
-        <!-- Danger Zone -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="12dp"
-            android:text="危险区域"
-            android:textColor="#FF453A"
-            android:textSize="18sp"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:layout_marginBottom="@dimen/spacing_gap"
+            android:text="设备与消息提醒"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="@dimen/text_heading"
             android:textStyle="bold" />
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -249,13 +288,101 @@
                 android:padding="4dp">
 
                 <TextView
+                    android:id="@+id/btnNotificationRules"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/control_height"
+                    android:padding="@dimen/spacing_card"
+                    android:text="消息提醒规则"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="@dimen/text_control"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/btnBoundDevices"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/control_height"
+                    android:padding="@dimen/spacing_card"
+                    android:text="同 ID 的设备"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="@dimen/text_control"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/btnBindIdentity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/control_height"
+                    android:padding="@dimen/spacing_card"
+                    android:text="绑定已有 ID"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="@dimen/text_control"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Danger Zone -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:layout_marginBottom="@dimen/spacing_gap"
+            android:text="危险区域"
+            android:textColor="#FF453A"
+            android:textSize="@dimen/text_heading"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.Accnotify.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="4dp">
+
+                <TextView
+
+                    android:minHeight="@dimen/control_height"
                     android:id="@+id/btnResetEncryption"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:text="重置 E2E 加密密钥"
-                    android:textColor="#FF453A"
-                    android:textSize="15sp"
+                    android:padding="@dimen/spacing_card"
+                    android:text="仅重置 RSA 密钥"
+                    android:textColor="?attr/colorError"
+                    android:textSize="@dimen/text_control"
+                    android:background="?attr/selectableItemBackground" />
+
+                <TextView
+                    android:id="@+id/btnResetDeviceAndEncryption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/control_height"
+                    android:padding="@dimen/spacing_card"
+                    android:text="重置设备 ID 和 RSA 密钥"
+                    android:textColor="?attr/colorError"
+                    android:textSize="@dimen/text_control"
+                    android:background="?attr/selectableItemBackground" />
+
+                <TextView
+                    android:id="@+id/btnUnregisterDevice"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/control_height"
+                    android:padding="@dimen/spacing_card"
+                    android:text="注销设备 ID 和服务端公钥"
+                    android:textColor="?attr/colorError"
+                    android:textSize="@dimen/text_control"
                     android:background="?attr/selectableItemBackground" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -264,42 +391,39 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:layout_marginBottom="@dimen/spacing_gap"
             android:text="关于项目"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="18sp"
+            android:textSize="@dimen/text_heading"
             android:textStyle="bold" />
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.Material3.CardView.Elevated"
+            style="@style/Widget.Accnotify.Card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="@dimen/spacing_card">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Accnotify 是一款基于 WebSocket 的安卓推送通知工具，提供稳定、安全（端到端加密）的实时消息推送服务。"
+                    android:text="Accnotify 是一款基于 WebSocket 的安卓推送通知工具，支持服务端使用设备公钥加密投递、客户端用本地私钥解密。"
                     android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_body"
                     android:lineSpacingMultiplier="1.2" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="@dimen/spacing_gap"
                     android:gravity="center_vertical"
                     android:background="?attr/selectableItemBackground"
-                    android:padding="8dp">
+                    android:padding="@dimen/spacing_small">
 
                     <TextView
                         android:id="@+id/linkGithub"
@@ -311,8 +435,8 @@
                         android:textStyle="bold" />
 
                     <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:layout_width="@dimen/icon_chevron_size"
+                        android:layout_height="@dimen/icon_chevron_size"
                         android:src="@drawable/ic_fluent_chevron_right"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -322,10 +446,10 @@
                     android:id="@+id/btnCheckUpdate"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/spacing_small"
                     android:gravity="center_vertical"
                     android:background="?attr/selectableItemBackground"
-                    android:padding="8dp">
+                    android:padding="@dimen/spacing_small">
 
                     <TextView
                         android:id="@+id/tvVersion"
@@ -334,20 +458,20 @@
                         android:layout_weight="1"
                         android:text="Version 0.0.1"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="12sp" />
+                        android:textSize="@dimen/text_caption" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="检查更新"
                         android:textColor="?attr/colorPrimary"
-                        android:textSize="12sp"
-                        android:paddingStart="8dp"
+                        android:textSize="@dimen/text_caption"
+                        android:paddingStart="@dimen/spacing_small"
                         android:paddingEnd="4dp" />
 
                     <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:layout_width="@dimen/icon_chevron_size"
+                        android:layout_height="@dimen/icon_chevron_size"
                         android:src="@drawable/ic_fluent_chevron_right"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -355,10 +479,6 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="100dp" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

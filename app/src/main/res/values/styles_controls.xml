@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Widget.Accnotify.Text" parent="Widget.AppCompat.TextView">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textSize">@dimen/text_body</item>
+    </style>
+
+    <style name="Widget.Accnotify.Input" parent="Widget.AppCompat.EditText">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textSize">@dimen/text_control</item>
+        <item name="android:minHeight">@dimen/control_height</item>
+        <item name="android:paddingHorizontal">@dimen/control_padding_horizontal</item>
+        <item name="android:paddingVertical">@dimen/control_padding_vertical</item>
+    </style>
+
+    <style name="Widget.Accnotify.RadioButton" parent="Widget.Material3.CompoundButton.RadioButton">
+        <item name="android:textSize">@dimen/text_control</item>
+        <item name="android:minHeight">@dimen/control_height</item>
+    </style>
+
+    <style name="Widget.Accnotify.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="android:textSize">@dimen/text_control</item>
+        <item name="android:minHeight">@dimen/control_height</item>
+    </style>
+</resources>

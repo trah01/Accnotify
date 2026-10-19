@@ -20,7 +20,7 @@ const (
 	NonceSize = 12
 )
 
-// Crypto handles E2E encryption operations
+// Crypto handles public-key message encryption.
 type Crypto struct{}
 
 // NewCrypto creates a new Crypto instance
@@ -51,14 +51,28 @@ func (c *Crypto) ParsePublicKey(pemKey string) (*rsa.PublicKey, error) {
 // EncryptMessage encrypts a message using hybrid encryption (RSA + AES-GCM)
 // Returns: base64(encrypted_aes_key + nonce + ciphertext)
 func (c *Crypto) EncryptMessage(publicKey *rsa.PublicKey, plaintext []byte) (string, error) {
+	return c.encryptMessage(publicKey, plaintext, false)
+}
+
+func (c *Crypto) EncryptPCMessage(publicKey *rsa.PublicKey, plaintext []byte) (string, error) {
+	return c.encryptMessage(publicKey, plaintext, true)
+}
+
+func (c *Crypto) encryptMessage(publicKey *rsa.PublicKey, plaintext []byte, pc bool) (string, error) {
 	// Generate random AES key
 	aesKey := make([]byte, AESKeySize)
 	if _, err := io.ReadFull(rand.Reader, aesKey); err != nil {
 		return "", err
 	}
 
-	// Encrypt AES key with RSA-OAEP
-	encryptedKey, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, aesKey, nil)
+	// Match Android Keystore: OAEP SHA-256, MGF1 SHA-1, empty label.
+	var encryptedKey []byte
+	var err error
+	if pc {
+		encryptedKey, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, aesKey, nil)
+	} else {
+		encryptedKey, err = encryptAndroidOAEP(publicKey, aesKey)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -98,10 +112,19 @@ func (c *Crypto) EncryptMessage(publicKey *rsa.PublicKey, plaintext []byte) (str
 
 // GenerateDeviceKey generates a random 32-character device key
 func (c *Crypto) GenerateDeviceKey() (string, error) {
-	bytes := make([]byte, 24) // 24 bytes = 32 base64 characters
-	if _, err := io.ReadFull(rand.Reader, bytes); err != nil {
-		return "", err
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	result := make([]byte, 0, 32)
+	// Reject the biased tail instead of reducing every random byte modulo 62.
+	for len(result) < 32 {
+		var b [32]byte
+		if _, err := io.ReadFull(rand.Reader, b[:]); err != nil {
+			return "", err
+		}
+		for _, value := range b {
+			if value < 248 && len(result) < 32 {
+				result = append(result, alphabet[int(value)%len(alphabet)])
+			}
+		}
 	}
-	// Use URL-safe base64 without padding
-	return base64.RawURLEncoding.EncodeToString(bytes), nil
+	return string(result), nil
 }

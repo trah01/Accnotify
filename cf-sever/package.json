@@ -1,0 +1,13 @@
+{
+  "name": "accnotify-cf-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node --test test/*.test.js"
+  },
+  "devDependencies": { "wrangler": "4.149.0" }
+}

@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/websocket"
 	"github.com/accnotify/server/storage"
+	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{

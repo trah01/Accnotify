@@ -62,4 +62,8 @@
     <!-- Register Button -->
     <color name="button_register_bg">#FFFFFF</color>
     <color name="button_register_text">#007AFF</color>
+    <!-- Light-mode message detail colors; dark colors are defined in values-night. -->
+    <color name="message_detail_background">#FFFFFF</color>
+    <color name="message_detail_text">#1C1C1E</color>
+    <color name="message_detail_secondary">#636366</color>
 </resources>

@@ -63,4 +63,8 @@
     <!-- Register Button (Dark Mode) -->
     <color name="button_register_bg">#1C3A5F</color>
     <color name="button_register_text">#5AC8FA</color>
+    <!-- Message details follow the dark surface and text colors. -->
+    <color name="message_detail_background">@color/clean_card_bg</color>
+    <color name="message_detail_text">@color/clean_text_primary</color>
+    <color name="message_detail_secondary">@color/clean_text_secondary</color>
 </resources>

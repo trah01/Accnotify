@@ -5,10 +5,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Message::class],
-    version = 2,
+    entities = [Message::class, NotificationRevision::class],
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -18,6 +20,12 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         private const val DATABASE_NAME = "accnotify.db"
+
+        private val migration2To3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS notification_revisions (messageId TEXT NOT NULL PRIMARY KEY, sequence INTEGER NOT NULL)")
+            }
+        }
 
         @Volatile
         private var instance: AppDatabase? = null
@@ -33,7 +41,8 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 DATABASE_NAME
-            ).fallbackToDestructiveMigration()
+            ).addMigrations(migration2To3)
+            .fallbackToDestructiveMigration()
             .build()
         }
     }

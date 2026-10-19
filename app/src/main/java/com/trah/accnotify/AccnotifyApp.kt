@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import com.trah.accnotify.crypto.KeyManager
 import com.trah.accnotify.data.AppDatabase
+import com.trah.accnotify.util.MessageNotificationChannels
 
 class AccnotifyApp : Application() {
 
@@ -26,6 +27,8 @@ class AccnotifyApp : Application() {
 
         // Initialize key manager
         keyManager = KeyManager(this)
+        keyManager.getCommonSenderEncryptionKey()
+        keyManager.getCommonDeviceId()
         keyManager.ensureKeysExist()
 
         // Apply saved light/dark mode
@@ -65,18 +68,7 @@ class AccnotifyApp : Application() {
             }
             notificationManager.createNotificationChannel(serviceChannel)
 
-            // Message notification channel (high priority)
-            val messageChannel = NotificationChannel(
-                CHANNEL_MESSAGES,
-                "消息通知",
-                NotificationManager.IMPORTANCE_MAX
-            ).apply {
-                description = "推送消息通知"
-                enableVibration(true)
-                enableLights(true)
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-            }
-            notificationManager.createNotificationChannel(messageChannel)
+            MessageNotificationChannels.register(notificationManager)
         }
     }
 

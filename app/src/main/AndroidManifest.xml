@@ -10,9 +10,6 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- For exact alarms (keep-alive) -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- For battery optimization exemption -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
@@ -39,6 +36,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Keep-alive settings -->
+        <activity
+            android:name=".ui.KeepAliveSettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity" />
+
+        <activity android:name=".ui.NotificationRulesActivity" android:exported="false"
+            android:parentActivityName=".ui.MainActivity" />
 
         <!-- Tutorial Activity -->
         <activity
@@ -75,6 +81,10 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <!-- Boot Receiver -->
+        <receiver
+            android:name=".service.NotificationDismissReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".service.BootReceiver"
             android:exported="true">

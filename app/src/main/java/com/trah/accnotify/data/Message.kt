@@ -15,6 +15,7 @@ data class Message(
     val icon: String? = null,
     val url: String? = null,
     val image: String? = null,
+    // Legacy columns retained for database compatibility; incoming sound/badge are ignored.
     val sound: String? = null,
     val badge: Int = 0,
     val encryptedContent: String? = null,

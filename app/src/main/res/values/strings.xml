@@ -1,98 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Accnotify</string>
-    <string name="app_description">极简、纯净的即时通知推送</string>
-    
-    <!-- Main Activity -->
-    <string name="device_key_label">设备密钥</string>
-    <string name="server_url_label">服务器地址</string>
-    <string name="copy_key">复制密钥</string>
-    <string name="copy_url">复制推送地址</string>
-    <string name="test_push">发送测试通知</string>
-    <string name="connection_status">连接状态</string>
-    <string name="status_connected">已连接</string>
-    <string name="status_disconnected">未连接</string>
-    <string name="status_connecting">连接中...</string>
-    
-    <!-- Settings -->
-    <string name="settings">设置</string>
-    <string name="server_settings">服务器设置</string>
-    <string name="server_url">服务器地址</string>
-    <string name="server_url_summary">输入您的 Accnotify 服务器地址</string>
-    <string name="notification_settings">通知设置</string>
-    <string name="notification_sound">通知提示音</string>
-    <string name="notification_vibrate">振动</string>
-    <string name="security_settings">安全设置</string>
-    <string name="regenerate_key">重新生成密钥</string>
-    <string name="regenerate_key_warning">重新生成密钥后，需要重新配置所有推送源</string>
-    <string name="about">关于</string>
-    <string name="version">版本</string>
-    
-    <!-- History -->
-    <string name="history">历史记录</string>
-    <string name="no_messages">暂无消息</string>
-    <string name="clear_history">清空历史</string>
-    <string name="clear_history_confirm">确定要清空所有历史记录吗？</string>
-    
-    <!-- Notifications -->
     <string name="notification_channel_name">通知服务</string>
     <string name="notification_channel_description">WebSocket 连接保活</string>
     <string name="service_notification_title">Accnotify 运行中</string>
-    <string name="service_notification_text">点击查看详情</string>
-    
-    <!-- Accessibility Service -->
     <string name="accessibility_description">用于维持 Accnotify 后台运行稳定性，开启后系统将不会轻易杀死本应用。</string>
-    <string name="accessibility_permission">辅助功能（保活）</string>
-    <string name="accessibility_summary">开启辅助功能以增强后台运行稳定性</string>
-
-    <!-- Common -->
-    <string name="confirm">确定</string>
-    <string name="cancel">取消</string>
-    <string name="copied">已复制到剪贴板</string>
-    <string name="error">错误</string>
-    <string name="success">成功</string>
-
-    <!-- Tutorial -->
-    <string name="tutorial_instructions"><![CDATA[什么是 Accnotify
-
-Accnotify 是一款基于 WebSocket 的安卓推送工具。
-通过简单的 HTTP 请求，即可向手机发送实时通知。
-
-快速开始
-
-1. 复制首页的 Push URL
-2. 向该地址发送 HTTP 请求
-3. 手机即时收到推送通知
-
-请求参数
-
-支持的 JSON 字段：
-• title - 通知标题（可选）
-• body - 通知内容（必填）
-
-请求方式
-
-GET 请求
-  直接浏览器访问 URL
-  支持 URL 参数: ?title=标题&body=内容
-
-POST 请求
-  发送 JSON body
-  Content-Type: application/json
-
-安全说明
-
-• 所有消息采用 RSA 端到端加密，加密数据请用 POST，GET 无法加密
-• 服务器无法解密您的消息内容
-• Push Key 是您的唯一凭证，请妥善保管
-• 重置密钥后，旧链接将立即失效
-
-应用场景
-
-• 服务器监控告警
-• 自动化脚本通知
-• IoT 设备状态推送
-• CI/CD 构建通知
-• 定时任务提醒
-• 第三方服务集成]]></string>
+    <string name="official_server_disclaimer_title">官方服务器使用声明</string>
+    <string name="official_server_disclaimer_message">您正在使用官方服务器 https://an.trah.cn。\n\n运营者不主动查看或使用您发送的消息内容。消息内容及发送行为由发送者负责，与运营者无关。\n\n为完成投递和断线补发，服务器会临时保存消息：收到客户端确认后立即删除；未确认的消息在 5 分钟后失效并自动清理。服务器只保留推送数量统计，不长期保存消息内容。\n\n确认后，本设备不再重复提醒。</string>
+    <string name="official_server_disclaimer_accept">我已阅读并同意</string>
+    <string name="official_server_disclaimer_decline">暂不使用</string>
+    <string name="keep_alive_restricted_settings_hint">由于国产系统的限制，建议开启无障碍保活，如果不开也能用自然最好</string>
 </resources>

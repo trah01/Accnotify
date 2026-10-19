@@ -2,1058 +2,319 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Accnotify · Push Tester</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accnotify · 接口测试</title>
 <style>
-  :root {
-    --bg:        #f7f8fa;
-    --bg2:       #ffffff;
-    --bg3:       #eef0f4;
-    --border:    #dce0e8;
-    --accent:    #3b82f6;
-    --accent2:   #6366f1;
-    --warn:      #f59e0b;
-    --text:      #1e293b;
-    --text2:     #334155;
-    --muted:     #94a3b8;
-    --success:   #10b981;
-    --error:     #ef4444;
-    --mono:      'JetBrains Mono', monospace;
-    --sans:      'Inter', system-ui, sans-serif;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-    --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
-    --radius:    10px;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 15px;
-    line-height: 1.7;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* ── Layout ── */
-  .shell {
-    display: grid;
-    grid-template-rows: 60px 1fr;
-    grid-template-columns: 460px 1fr;
-    height: 100vh;
-  }
-
-  /* ── Header ── */
-  header {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 28px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .logo-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 8px rgba(59,130,246,0.4);
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-
-  .logo-name {
-    font-family: var(--mono);
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    color: var(--text);
-  }
-
-  .logo-badge {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--accent);
-    background: rgba(59,130,246,0.1);
-    padding: 2px 10px;
-    border-radius: 20px;
-  }
-
-  .header-right { display: flex; align-items: center; gap: 12px; }
-
-  .status-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    background: var(--bg3);
-    color: var(--muted);
-    transition: all .2s;
-  }
-  .status-pill .status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--muted);
-    transition: background .2s;
-  }
-  .status-pill.ok { background: rgba(16,185,129,0.1); color: var(--success); }
-  .status-pill.ok .status-dot { background: var(--success); }
-  .status-pill.err { background: rgba(239,68,68,0.1); color: var(--error); }
-  .status-pill.err .status-dot { background: var(--error); }
-
-  /* ── Left panel ── */
-  .left-panel {
-    overflow-y: auto;
-    border-right: 1px solid var(--border);
-    background: var(--bg2);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .config-section {
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-  }
-
-  .section-label {
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    margin-bottom: 14px;
-  }
-
-  .field { margin-bottom: 14px; }
-  .field:last-child { margin-bottom: 0; }
-
-  .field label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text2);
-    margin-bottom: 6px;
-  }
-
-  .field input, .field textarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-family: var(--sans);
-    font-size: 14px;
-    color: var(--text);
-    background: var(--bg);
-    transition: border-color .15s, box-shadow .15s;
-    outline: none;
-  }
-  .field input:focus, .field textarea:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-  }
-  .field input::placeholder, .field textarea::placeholder { color: var(--muted); }
-  .field textarea { resize: vertical; min-height: 60px; }
-
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-  /* ── Tabs ── */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    background: var(--bg2);
-  }
-  .tab {
-    padding: 13px 18px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all .15s;
-  }
-  .tab:hover { color: var(--text2); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  .tab-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px 24px;
-  }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  /* ── Buttons ── */
-  .btn-send {
-    display: block;
-    width: 100%;
-    padding: 12px;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 600;
-    font-family: var(--sans);
-    cursor: pointer;
-    margin-top: 18px;
-    transition: all .15s;
-    box-shadow: var(--shadow);
-  }
-  .btn-send:hover { background: #2563eb; box-shadow: var(--shadow-md); transform: translateY(-1px); }
-  .btn-send:active { transform: translateY(0); }
-  .btn-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .btn-send.loading::after { content: ' …'; }
-
-  /* ── Image drop ── */
-  .image-drop {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 28px;
-    text-align: center;
-    cursor: pointer;
-    transition: all .2s;
-    position: relative;
-    background: var(--bg);
-  }
-  .image-drop:hover, .image-drop.drag-over { border-color: var(--accent); background: rgba(59,130,246,0.04); }
-  .image-drop input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .image-drop-icon { font-size: 36px; margin-bottom: 8px; }
-  .image-drop-text { font-size: 14px; color: var(--muted); }
-  .image-drop-text span { color: var(--accent); font-weight: 500; }
-
-  .image-preview-wrap {
-    display: none;
-    align-items: center;
-    gap: 16px;
-    padding: 14px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius);
-    margin-top: 12px;
-    background: var(--bg);
-  }
-  .image-preview-wrap.has-image { display: flex; }
-  .image-preview-wrap img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
-  .image-preview-meta { flex: 1; }
-  .image-preview-name { font-size: 14px; font-weight: 500; color: var(--text); }
-  .image-preview-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .btn-remove-img {
-    background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px;
-    font-size: 12px; color: var(--error); cursor: pointer; margin-top: 6px;
-    transition: all .15s;
-  }
-  .btn-remove-img:hover { background: rgba(239,68,68,0.06); border-color: var(--error); }
-
-  /* ── Webhook types ── */
-  .webhook-types { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-  .wh-type {
-    padding: 7px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    background: var(--bg);
-    color: var(--text2);
-    border: 1.5px solid var(--border);
-    transition: all .15s;
-  }
-  .wh-type:hover { border-color: var(--accent); color: var(--accent); }
-  .wh-type.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-  /* ── Payload editor ── */
-  .payload-editor { margin-top: 8px; }
-  .payload-bar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 14px;
-    background: var(--bg3);
-    border: 1.5px solid var(--border);
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-  }
-  .payload-bar-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-  .btn-fmt {
-    font-size: 12px; font-weight: 500; color: var(--accent); background: none; border: 1px solid var(--accent);
-    border-radius: 5px; padding: 3px 10px; cursor: pointer; transition: all .15s;
-  }
-  .btn-fmt:hover { background: var(--accent); color: #fff; }
-
-  .payload-editor textarea {
-    width: 100%;
-    min-height: 220px;
-    padding: 14px;
-    border: 1.5px solid var(--border);
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--text);
-    background: var(--bg2);
-    resize: vertical;
-    outline: none;
-  }
-  .payload-editor textarea:focus { border-color: var(--accent); }
-
-  /* ── Right panel ── */
-  .right-panel {
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-    overflow: hidden;
-  }
-
-  .response-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-  }
-  .response-title { font-size: 14px; font-weight: 600; color: var(--text); }
-  .response-meta { margin-left: auto; display: flex; gap: 16px; }
-  .res-status { font-family: var(--mono); font-size: 13px; font-weight: 600; }
-  .res-time { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-
-  .btn-clear {
-    font-size: 13px; font-weight: 500; color: var(--muted); background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 6px; padding: 5px 14px; cursor: pointer; transition: all .15s;
-  }
-  .btn-clear:hover { background: var(--border); color: var(--text2); }
-
-  .response-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 24px;
-  }
-
-  /* ── Log entries ── */
-  .log-entry {
-    margin-bottom: 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg2);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-  }
-
-  .log-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: background .1s;
-  }
-  .log-head:hover { background: var(--bg); }
-
-  .log-method {
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 5px;
-    background: var(--accent);
-    color: #fff;
-  }
-
-  .log-url {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text2);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-  }
-
-  .log-badge {
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 600;
-    padding: 2px 10px;
-    border-radius: 12px;
-  }
-  .log-badge.ok  { color: var(--success); background: rgba(16,185,129,0.1); }
-  .log-badge.err { color: var(--error);   background: rgba(239,68,68,0.1); }
-
-  .log-time {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .log-body {
-    padding: 16px;
-    border-top: 1px solid var(--border);
-    background: var(--bg);
-  }
-
-  .log-section-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    margin-top: 14px;
-    font-weight: 600;
-  }
-
-  .log-section-title:first-child { margin-top: 0; }
-
-  pre {
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  .json-key   { color: #2563eb; }
-  .json-str   { color: #059669; }
-  .json-num   { color: #d97706; }
-  .json-bool  { color: #c026d3; }
-  .json-null  { color: #94a3b8; }
-
-  /* ── Empty state ── */
-  .empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    color: var(--muted);
-    padding: 60px;
-  }
-  .empty-icon { font-size: 48px; opacity: 0.3; }
-  .empty-text { font-size: 15px; }
-
-  /* ── Scrollbars ── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-  /* ── Hint ── */
-  .hint {
-    font-size: 13px;
-    color: var(--text2);
-    background: rgba(59,130,246,0.06);
-    border-radius: 8px;
-    padding: 12px 16px;
-    border-left: 3px solid var(--accent);
-    line-height: 1.7;
-    margin-bottom: 14px;
-  }
-  .hint code {
-    font-family: var(--mono);
-    font-size: 13px;
-    background: rgba(59,130,246,0.08);
-    padding: 1px 6px;
-    border-radius: 4px;
-    color: var(--accent);
-  }
-
-  @media (max-width: 900px) {
-    .shell { grid-template-columns: 1fr; grid-template-rows: 56px 1fr; }
-    .right-panel { display: none; }
-  }
+:root{--bg:#fff;--surface:#f5f6f8;--border:#dce1e8;--text:#202936;--muted:#606c7c;--accent:#2563eb;--error:#b42318;--success:#167044;--radius:8px;--font:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 var(--font)}header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border)}h1{font-size:17px;margin:0}main{display:grid;grid-template-columns:minmax(340px,480px) minmax(0,1fr);height:calc(100dvh - 53px)}.controls,.logs{overflow:auto;padding:16px 20px}.controls{border-right:1px solid var(--border)}.config{padding-bottom:12px;border-bottom:1px solid var(--border)}label{display:block;margin:0 0 4px;font-weight:500}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);min-height:42px}textarea{resize:vertical;min-height:86px}input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.field{margin-bottom:12px}.row{display:flex;gap:10px;align-items:flex-start}.row>.field{flex:1;min-width:0}.hint{font-size:12px;color:var(--muted);margin:8px 0 12px}.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:12px 0}button{cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);padding:8px 12px;min-height:40px}button:hover{background:var(--surface)}button:active{transform:translateY(1px)}button:disabled{opacity:.55;cursor:wait}.tabs button[aria-selected=true],.primary{background:var(--accent);border-color:var(--accent);color:#fff}.primary:hover{background:#1d4ed8}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.panel[hidden]{display:none}.check{display:flex;align-items:center;gap:8px;margin:10px 0}.check input{width:16px;min-height:16px}details{margin:12px 0}summary{cursor:pointer;color:var(--muted)}code,pre{font-family:var(--mono);font-size:12px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);padding:12px;border-radius:6px;margin:8px 0}.log{border-bottom:1px solid var(--border);padding:12px 0}.log summary{color:var(--text);overflow-wrap:anywhere}.log small{color:var(--muted)}.log.ok summary{color:var(--success)}.log.error summary,#notice{color:var(--error)}#notice{min-height:22px;margin-top:8px}#status{color:var(--muted);font-size:12px}.log-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:-16px;background:var(--bg);padding:0 0 10px}.log-toolbar h2{font-size:14px;margin:0}#empty{color:var(--muted)}.wide{width:100%}@media(max-width:760px){main{display:block;height:auto}.controls{border-right:0;border-bottom:1px solid var(--border)}.logs{min-height:240px;max-height:70dvh}header,.controls,.logs{padding-left:12px;padding-right:12px}.row{flex-wrap:wrap}.row>.field{flex-basis:140px}}
 </style>
 </head>
 <body>
-<div class="shell">
-
-  <!-- Header -->
-  <header>
-    <div class="logo">
-      <div class="logo-dot"></div>
-      <span class="logo-name">ACCNOTIFY</span>
-      <span class="logo-badge">PUSH TESTER</span>
-    </div>
-    <div class="header-right">
-      <div class="status-pill" id="statusPill">
-        <div class="status-dot"></div>
-        <span id="statusText">idle</span>
-      </div>
-    </div>
-  </header>
-
-  <!-- Left panel -->
-  <div class="left-panel">
-    <!-- Config -->
-    <div class="config-section">
-      <div class="section-label">连接配置</div>
-      <div class="field">
-        <label>服务器地址</label>
-        <input id="serverUrl" type="text" placeholder="https://your-server.example.com" value="">
-      </div>
-      <div class="field">
-        <label>Device Key</label>
-        <input id="deviceKey" type="text" placeholder="在 APP 首页查看你的 Device Key">
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <div class="tab active" data-tab="push">JSON 推送</div>
-      <div class="tab" data-tab="image">图片推送</div>
-      <div class="tab" data-tab="webhook">Webhook</div>
-      <div class="tab" data-tab="simple">简单推送</div>
-    </div>
-
-    <!-- Tab content -->
-    <div class="tab-content">
-
-      <!-- ── Push tab ── -->
-      <div class="tab-panel active" id="tab-push">
-        <div class="hint">
-          POST 请求到 <code>/push/:device_key</code>，支持 JSON 格式自定义通知内容。
-        </div>
-        <div class="field">
-          <label>标题 (title)</label>
-          <input type="text" id="pushTitle" placeholder="例如：服务器报警" value="Accnotify 测试通知">
-        </div>
-        <div class="field">
-          <label>正文 (body)</label>
-          <textarea id="pushBody" rows="3" placeholder="通知内容，支持 Markdown 格式">这是一条来自 Web 测试页面的推送消息。
-
-当前时间：请点击发送查看实时时间戳。支持 **Markdown** 格式。</textarea>
-        </div>
-        <div class="row">
-          <div class="field">
-            <label>分组 (group)</label>
-            <input type="text" id="pushGroup" placeholder="可选，用于消息归组" value="测试">
-          </div>
-          <div class="field">
-            <label>声音 (sound)</label>
-            <input type="text" id="pushSound" placeholder="default">
-          </div>
-        </div>
-        <div class="field">
-          <label>跳转链接 (url)</label>
-          <input type="text" id="pushUrl" placeholder="https://..." value="https://github.com/trah01/Accnotify">
-        </div>
-        <button class="btn-send" id="btnSendPush" onclick="sendPush()">发送通知</button>
-      </div>
-
-      <!-- ── Image tab ── -->
-      <div class="tab-panel" id="tab-image">
-        <div class="hint">
-          推送带图片的通知。支持两种方式：<br>
-          1. <b>图片 URL</b>：服务端直接传输链接，客户端下载展示（推荐）<br>
-          2. <b>本地上传</b>：编码为 Base64 嵌入消息体（适合小图片）
-        </div>
-        <div class="field">
-          <label>标题 (title)</label>
-          <input type="text" id="imgTitle" placeholder="图片通知标题" value="图片推送测试">
-        </div>
-        <div class="field">
-          <label>正文 (body)</label>
-          <textarea id="imgBody" rows="2" placeholder="可选说明文字">这是一条带图片的推送通知，检查客户端是否能正确显示图片。</textarea>
-        </div>
-
-        <div>
-          <div class="section-label" style="margin-bottom:10px">图片来源</div>
-          <!-- URL mode -->
-          <div class="field">
-            <label>图片 URL（推荐，服务端仅传输链接不下载）</label>
-            <input type="text" id="imgUrl" placeholder="https://example.com/photo.jpg" oninput="onImgUrlInput()">
-          </div>
-          <div style="text-align:center; color:var(--muted); font-size:13px; margin: 8px 0;">— 或 —</div>
-          <!-- File upload mode -->
-          <div class="image-drop" id="imageDrop">
-            <input type="file" id="imgFile" accept="image/*" onchange="onFileSelect(this)">
-            <div class="image-drop-icon">🖼</div>
-            <div class="image-drop-text">拖拽图片到此处，或 <span>点击上传</span></div>
-            <div class="image-drop-text" style="margin-top:6px; font-size:12px; color:var(--muted)">支持 JPG / PNG / GIF / WebP（编码为 Base64）</div>
-          </div>
-          <div class="image-preview-wrap" id="imagePreviewWrap">
-            <img id="imagePreview" src="" alt="">
-            <div class="image-preview-meta">
-              <div class="image-preview-name" id="imageName"></div>
-              <div class="image-preview-size" id="imageSize"></div>
-              <button class="btn-remove-img" onclick="clearImage()">✕ 移除</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="hint" id="imgHint" style="display:none">
-          ⚠ Base64 图片较大，推荐小于 200KB 以免超出服务端限制。
-        </div>
-
-        <button class="btn-send" id="btnSendImg" onclick="sendImage()">发送图片通知</button>
-      </div>
-
-      <!-- ── Webhook tab ── -->
-      <div class="tab-panel" id="tab-webhook">
-        <div class="hint">
-          模拟各平台 Webhook 回调。选择平台后会填充对应的示例数据，你也可以自行修改。
-        </div>
-        <div>
-          <div class="section-label" style="margin-bottom:10px">Webhook 类型</div>
-          <div class="webhook-types">
-            <div class="wh-type active" data-wh="generic" onclick="selectWebhook('generic')">通用</div>
-            <div class="wh-type" data-wh="github" onclick="selectWebhook('github')">GitHub</div>
-            <div class="wh-type" data-wh="gitlab" onclick="selectWebhook('gitlab')">GitLab</div>
-            <div class="wh-type" data-wh="docker" onclick="selectWebhook('docker')">Docker Hub</div>
-            <div class="wh-type" data-wh="gitea" onclick="selectWebhook('gitea')">Gitea</div>
-          </div>
-        </div>
-
-        <div class="payload-editor">
-          <div class="payload-bar">
-            <span class="payload-bar-label">JSON Payload</span>
-            <button class="btn-fmt" onclick="formatPayload()">格式化</button>
-          </div>
-          <textarea id="webhookPayload" spellcheck="false"></textarea>
-        </div>
-
-        <button class="btn-send" id="btnSendWh" onclick="sendWebhook()">发送 Webhook</button>
-      </div>
-
-      <!-- ── Simple tab ── -->
-      <div class="tab-panel" id="tab-simple">
-        <div class="hint">
-          GET 请求推送，兼容 Bark URL 格式，无需构造 JSON 请求体：<br>
-          <code>/push/:device_key/:title/:body</code><br>
-          支持 Query 参数：<code>?group=xxx&amp;icon=xxx&amp;url=xxx&amp;image=xxx&amp;sound=xxx</code><br>
-          POST 也支持 form-encoded 和 query 参数覆盖，方便从 Bark 脚本迁移。
-        </div>
-        <div class="field">
-          <label>标题</label>
-          <input type="text" id="simpleTitle" placeholder="通知标题" value="来自 GET 请求的推送">
-        </div>
-        <div class="field">
-          <label>内容</label>
-          <input type="text" id="simpleBody" placeholder="通知内容" value="这是一条通过简单 GET 请求发送的推送通知，适用于 Bark 兼容场景和快捷指令。">
-        </div>
-        <div class="field">
-          <label>预览 URL（只读）</label>
-          <input type="text" id="simplePreviewUrl" readonly style="color:var(--muted); font-size:13px; background:var(--bg3)">
-        </div>
-        <button class="btn-send" onclick="sendSimple()">发送</button>
-      </div>
-
-    </div><!-- end tab-content -->
-  </div><!-- end left-panel -->
-
-  <!-- Right panel -->
-  <div class="right-panel">
-    <div class="response-header">
-      <span class="response-title">请求日志</span>
-      <div class="response-meta">
-        <span class="res-status" id="resStatus"></span>
-        <span class="res-time" id="resTime"></span>
-      </div>
-      <button class="btn-clear" onclick="clearLog()">清空</button>
-    </div>
-    <div class="response-body" id="responseBody">
-      <div class="empty-state" id="emptyState">
-        <div class="empty-icon">📡</div>
-        <div class="empty-text">填写连接配置后发送请求，在此查看响应</div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- end shell -->
-
+<header><h1>Accnotify · 接口测试</h1><span id="status" role="status">待操作</span></header>
+<main>
+<section class="controls" aria-label="接口配置">
+<div class="config">
+<div class="field"><label for="pushLink">粘贴推送链接</label><input id="pushLink" type="url" placeholder="https://notify.example.com/push/推送ID?target=pc" autocomplete="off"><p class="hint" id="linkStatus" role="status"></p></div>
+<div class="field"><label for="server">推送服务器</label><input id="server" type="url" placeholder="https://notify.example.com" autocomplete="off"></div>
+<div class="field"><label for="pushKey">推送 ID（共用 ID）</label><input id="pushKey" placeholder="客户端首页的推送 ID" autocomplete="off"></div>
+<div class="field"><label for="credential">本机设备凭据（设备管理 / 连接）</label><input id="credential" type="password" autocomplete="off" placeholder="本机 device_key，与共用推送 ID 区分"></div>
+<div class="field"><label for="target">推送目标</label><input id="target" list="targets" value="all"><datalist id="targets"><option value="all">全部设备</option><option value="pc">全部电脑</option><option value="desktop">全部电脑（别名）</option><option value="mobile">全部手机</option></datalist></div>
+<p class="hint">默认发给全部设备，也可填写具体 endpoint_id。凭据和测试私钥只保留在当前页面，刷新后清除。</p>
+</div>
+<nav class="tabs" aria-label="接口类别">
+<button aria-selected="true" data-tab="push">推送</button><button aria-selected="false" data-tab="webhook">Webhook</button><button aria-selected="false" data-tab="device">设备 / 绑定</button><button aria-selected="false" data-tab="ws">WebSocket</button><button aria-selected="false" data-tab="admin">后台</button>
+</nav>
+<div class="panel" id="panel-push">
+<div class="row"><div class="field"><label for="transport">发送方式</label><select id="transport"><option value="json">POST JSON</option><option value="form">POST 表单</option><option value="post-query">POST 查询参数</option><option value="query">GET 查询参数</option><option value="body-path">GET /正文</option><option value="path">GET /标题/正文</option></select></div><div class="field"><label for="operation">消息操作</label><select id="operation"><option value="send">新增 / 更新</option><option value="delete">删除</option></select></div></div>
+<div class="field"><label for="title">标题</label><input id="title" value="Accnotify 测试通知"></div>
+<div class="field"><label for="body">正文</label><textarea id="body">这是一条接口测试消息。</textarea></div>
+<div class="field"><label for="category">通知分类</label><select id="category"><option value="">普通消息</option><option value="important">重要提醒</option><option value="work">工作通知</option><option value="life">生活通知</option><option value="custom">自定义分组</option></select></div>
+<div class="row"><div class="field"><label for="messageId">消息 ID</label><input id="messageId" placeholder="可选，相同 ID 更新原消息"></div><div class="field"><label for="group">分组（group）</label><input id="group" list="groups" placeholder="留空为普通消息"><datalist id="groups"><option value="important">重要提醒</option><option value="work">工作通知</option><option value="life">生活通知</option></datalist></div></div>
+<details><summary>Markdown、链接、图片等参数</summary>
+<div class="field"><label for="markdown">Markdown（优先于正文）</label><textarea id="markdown" placeholder="支持 **加粗** 等格式"></textarea></div>
+<div class="field"><label for="url">跳转链接</label><input id="url" type="url"></div>
+<div class="field"><label for="image">图片 URL / Base64</label><textarea id="image" placeholder="https://… 或 data:image/png;base64,…"></textarea></div>
+<div class="field"><label for="imageFile">从本地图片填入 Base64</label><input id="imageFile" type="file" accept="image/*"></div>
+<div class="field"><label for="icon">图标 URL</label><input id="icon" type="url"></div>
+<div class="row"><div class="field"><label for="sound">声音（兼容参数）</label><input id="sound"></div><div class="field"><label for="badge">角标（兼容参数）</label><input id="badge" type="number" min="0"></div></div>
+<p class="hint">Android 不通过 sound / badge 直接指定系统通知声音或角标。</p>
+</details>
+<label class="check"><input id="encrypt" type="checkbox">发送端 AES-256-GCM 加密</label>
+<div class="field"><label for="senderKey">发送端密钥（64 位十六进制）</label><input id="senderKey" type="password" autocomplete="off" placeholder="与接收端配置相同"></div>
+<p class="hint">加密使用 JSON / 表单 / 查询参数；目标保留在密文外。删除需填写消息 ID。target_count 是接受投递的设备数，不代表已经收到。</p>
+<button class="primary wide" id="sendPush">发送推送</button>
+</div>
+<div class="panel" id="panel-webhook" hidden>
+<div class="field"><label for="webhookType">平台</label><select id="webhookType"><option value="generic">通用</option><option value="github">GitHub</option><option value="gitlab">GitLab</option><option value="docker">Docker Hub</option><option value="gitea">Gitea</option><option value="forgejo">Forgejo</option><option value="feishu">飞书</option><option value="dingtalk">钉钉</option><option value="wecom">企业微信</option></select></div>
+<div class="field"><label for="webhookEvent">事件名称（可选，同源时使用）</label><input id="webhookEvent" placeholder="push"></div>
+<div class="field"><label for="webhookPayload">JSON 数据</label><textarea id="webhookPayload" rows="12" spellcheck="false"></textarea></div>
+<div class="actions"><button id="webhookTemplate">恢复示例</button><button id="formatWebhook">格式化</button><button class="primary" id="sendWebhook">发送 Webhook</button></div>
+<p class="hint">使用上方推送 ID 和目标；可修改示例测试不同平台的消息类型。当前服务端 CORS 不允许事件头，跨域测试请留空事件名称。</p>
+</div>
+<div class="panel" id="panel-device" hidden>
+<div class="field"><label for="deviceApi">接口</label><select id="deviceApi"></select></div>
+<p class="hint" id="deviceHint"></p><div id="deviceFields"></div>
+<div class="actions"><button id="generateIdentity">生成独立电脑测试设备</button><button id="generateReplacement">生成重置用 ID / RSA</button></div>
+<p class="hint">生成不会发送请求。只对测试设备操作；不要用现有手机客户端凭据注册不同公钥。生成的电脑设备可在连接页解密消息，手机公钥需由手机提供。</p>
+<button class="primary wide" id="sendDevice">发送请求</button>
+</div>
+<div class="panel" id="panel-ws" hidden>
+<p class="hint">使用本机设备凭据连接 /ws?key=…。连接已有设备会替换它的在线连接，推荐生成并注册独立测试设备。收到消息只展示在日志中，不自动 ACK；ACK 会从服务端移除待投递消息。</p>
+<div class="actions"><button class="primary" id="connectWs">连接</button><button id="disconnectWs">断开</button></div>
+<div class="field"><label for="ackId">投递 ID（收到消息的 id，不是通知 ID）</label><input id="ackId"></div>
+<button id="sendAck">确认此消息（ACK）</button>
+<div class="field" style="margin-top:12px"><label for="wsFrame">自定义 JSON 帧</label><textarea id="wsFrame">{"type":"pong"}</textarea></div><button id="sendFrame">发送帧</button>
+<p class="hint">自动回复应用层 ping；只有当前页生成的电脑 RSA 私钥可解密 RSA 消息。发送端密文使用推送页的 AES 密钥。页面不保存消息历史，关闭后日志丢失。</p>
+</div>
+<div class="panel" id="panel-admin" hidden>
+<div class="field"><label for="adminServer">后台地址（独立端口）</label><input id="adminServer" type="url" placeholder="https://admin.example.com"></div>
+<p class="hint">仅 Go 服务端支持。后台用 Cookie 登录，请通过反向代理把此测试页放在后台同源地址下打开（协议、主机、端口相同）；本地文件直接打开无法测试后台。这里不会放宽服务端认证或跨域规则。</p>
+<div class="field"><label for="adminApi">接口</label><select id="adminApi"></select></div><div id="adminFields"></div>
+<button class="primary wide" id="sendAdmin">发送后台请求</button>
+</div>
+<div id="notice" role="alert"></div>
+</section>
+<section class="logs" aria-label="请求日志"><div class="log-toolbar"><h2>请求与接收日志</h2><button id="clearLog">清空</button></div><p id="empty">操作接口后在这里查看请求、状态码和响应。</p><div id="logList"></div></section>
+</main>
 <script>
-// ── State ──
-let currentTab = 'push';
-let currentWebhook = 'generic';
-let base64ImageData = null;
-let base64ImageSize = 0;
-
-// ── Tab switching ──
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    currentTab = t.dataset.tab;
-    document.getElementById('tab-' + currentTab).classList.add('active');
-    if (currentTab === 'simple') updateSimplePreview();
-  });
-});
-
-// ── Config getters ──
-function getServer() { return (document.getElementById('serverUrl').value.trim() || '').replace(/\/$/, ''); }
-function getDeviceKey() { return document.getElementById('deviceKey').value.trim(); }
-
-function validate() {
-  if (!getServer()) { alert('请填写服务器地址'); return false; }
-  if (!getDeviceKey()) { alert('请填写 Device Key'); return false; }
-  return true;
-}
-
-// ── Simple push preview ──
-['simpleTitle','simpleBody'].forEach(id =>
-  document.getElementById(id).addEventListener('input', updateSimplePreview)
-);
-document.getElementById('serverUrl').addEventListener('input', updateSimplePreview);
-document.getElementById('deviceKey').addEventListener('input', updateSimplePreview);
-
-function updateSimplePreview() {
-  const s = getServer(), k = getDeviceKey();
-  const t = encodeURIComponent(document.getElementById('simpleTitle').value || 'title');
-  const b = encodeURIComponent(document.getElementById('simpleBody').value || 'body');
-  document.getElementById('simplePreviewUrl').value = `${s}/push/${k}/${t}/${b}`;
-}
-
-// ── Image handling ──
-const imageDrop = document.getElementById('imageDrop');
-
-imageDrop.addEventListener('dragover', e => { e.preventDefault(); imageDrop.classList.add('drag-over'); });
-imageDrop.addEventListener('dragleave', () => imageDrop.classList.remove('drag-over'));
-imageDrop.addEventListener('drop', e => {
-  e.preventDefault();
-  imageDrop.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) processImageFile(file);
-});
-
-function onFileSelect(input) {
-  if (input.files[0]) processImageFile(input.files[0]);
-}
-
-function processImageFile(file) {
-  base64ImageSize = file.size;
-  const reader = new FileReader();
-  reader.onload = e => {
-    base64ImageData = e.target.result;
-    document.getElementById('imgUrl').value = '';
-    const wrap = document.getElementById('imagePreviewWrap');
-    document.getElementById('imagePreview').src = base64ImageData;
-    document.getElementById('imageName').textContent = file.name;
-    document.getElementById('imageSize').textContent = formatBytes(file.size);
-    wrap.classList.add('has-image');
-    imageDrop.style.display = 'none';
-    document.getElementById('imgHint').style.display = file.size > 200 * 1024 ? 'block' : 'none';
-  };
-  reader.readAsDataURL(file);
-}
-
-function onImgUrlInput() {
-  if (document.getElementById('imgUrl').value) clearImage(true);
-}
-
-function clearImage(keepDrop) {
-  base64ImageData = null;
-  document.getElementById('imgFile').value = '';
-  document.getElementById('imagePreviewWrap').classList.remove('has-image');
-  imageDrop.style.display = '';
-  document.getElementById('imgHint').style.display = 'none';
-  if (!keepDrop) document.getElementById('imgUrl').value = '';
-}
-
-function formatBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
-  return (b/1024/1024).toFixed(2) + ' MB';
-}
-
-// ── Webhook templates ──
-const WH_TEMPLATES = {
-  generic: {
-    path: '/webhook/DEVICE_KEY',
-    payload: {
-      title: '系统监控告警',
-      body: '服务器 web-01 的 CPU 使用率超过 90%，持续 5 分钟。\n\n当前负载：12.5\n内存使用：87%\n磁盘 IO：高',
-      group: '监控',
-      url: 'https://monitor.example.com/alerts/12345',
-      image: 'https://via.placeholder.com/200x100.png?text=Alert'
-    }
-  },
-  github: {
-    path: '/webhook/DEVICE_KEY/github',
-    payload: {
-      ref: 'refs/heads/main',
-      commits: [
-        { message: 'feat: 添加 WebSocket 心跳保活机制', author: { name: 'trah' }, id: 'a1b2c3d4', url: 'https://github.com/trah01/Accnotify/commit/a1b2c3d4' },
-        { message: 'fix: 修复消息列表滚动卡顿问题', author: { name: 'trah' }, id: 'e5f6g7h8', url: 'https://github.com/trah01/Accnotify/commit/e5f6g7h8' }
-      ],
-      repository: { name: 'Accnotify', full_name: 'trah01/Accnotify', html_url: 'https://github.com/trah01/Accnotify' },
-      pusher: { name: 'trah' },
-      compare: 'https://github.com/trah01/Accnotify/compare/v1.0.0...v1.1.0',
-      head_commit: { message: 'fix: 修复消息列表滚动卡顿问题', author: { name: 'trah' } }
-    }
-  },
-  gitlab: {
-    path: '/webhook/DEVICE_KEY/gitlab',
-    payload: {
-      object_kind: 'push',
-      ref: 'refs/heads/develop',
-      user_name: 'trah',
-      total_commits_count: 3,
-      commits: [
-        { message: 'refactor: 重构数据库存储层，提升查询性能', author: { name: 'trah' } },
-        { message: 'test: 增加推送接口集成测试', author: { name: 'trah' } },
-        { message: 'docs: 更新 API 文档和部署说明', author: { name: 'trah' } }
-      ],
-      project: { name: 'accnotify-server', web_url: 'https://gitlab.com/trah/accnotify-server', namespace: 'trah' }
-    }
-  },
-  docker: {
-    path: '/webhook/DEVICE_KEY/docker',
-    payload: {
-      callback_url: 'https://registry.hub.docker.com/u/trah01/accnotify-server/hook/xxxx',
-      push_data: {
-        pusher: 'trah01',
-        pushed_at: Math.floor(Date.now()/1000),
-        tag: 'v1.2.0',
-        images: ['trah01/accnotify-server:v1.2.0']
-      },
-      repository: {
-        repo_name: 'trah01/accnotify-server',
-        namespace: 'trah01',
-        name: 'accnotify-server',
-        repo_url: 'https://hub.docker.com/r/trah01/accnotify-server',
-        description: 'Accnotify 推送通知服务器',
-        star_count: 5,
-        is_official: false
-      }
-    }
-  },
-  gitea: {
-    path: '/webhook/DEVICE_KEY/gitea',
-    payload: {
-      ref: 'refs/heads/main',
-      commits: [
-        { message: 'feat: 支持 Cloudflare Workers 部署方式', author: { name: 'trah' }, id: 'abc123', url: 'https://git.example.com/trah/accnotify/commit/abc123' },
-        { message: 'chore: 升级 Go 版本至 1.22', author: { name: 'trah' }, id: 'def456', url: 'https://git.example.com/trah/accnotify/commit/def456' }
-      ],
-      repository: { name: 'accnotify', full_name: 'trah/accnotify', html_url: 'https://git.example.com/trah/accnotify' },
-      pusher: { login: 'trah', full_name: 'trah' },
-      compare_url: 'https://git.example.com/trah/accnotify/compare/v1.0...v1.1'
-    }
-  }
+'use strict';
+const $ = id => document.getElementById(id);
+const val = id => $(id).value.trim();
+const enc = encodeURIComponent;
+let socket = null, identity = null, pendingIdentity = null, selfDevice = null;
+const receivedIds = new Set();
+const field = (key, label, value = '', type = 'text') => ({key, label, value, type});
+const deviceApis = {
+ health: {label:'GET /health · 健康检查', method:'GET', path:'/health', fields:[], hint:'检查当前推送服务器是否响应。'},
+ register: {label:'POST /register · 注册设备', method:'POST', path:'/register', fields:[field('device_key','独立设备 ID'),field('name','设备名称','浏览器测试设备'),field('platform','设备类型','pc','platform'),field('public_key','RSA 公钥（PEM）','','textarea')], hint:'电脑和手机使用各自公钥；每台设备独立注册。'},
+ request: {label:'POST /binding/request · 发送绑定验证码', method:'POST', path:'/binding/request', auth:true, fields:[field('group_key','要加入的推送 ID'),field('confirm_endpoint','确认设备 endpoint_id（可选）')], hint:'服务端只向选中的确认设备发送验证码，默认优先手机。去该设备读取，再执行验证。'},
+ verify: {label:'POST /binding/verify · 确认绑定', method:'POST', path:'/binding/verify', auth:true, fields:[field('request_id','绑定请求 ID'),field('code','6 位验证码'),field('new_device_key','验证成功后的新设备凭据')], hint:'验证码有效期 5 分钟。重试时保留同一新凭据；成功后自动填入本机凭据和共用推送 ID。'},
+ status: {label:'GET /binding/status · 共用设备列表', method:'GET', path:'/binding/status', auth:true, fields:[], hint:'查看共用推送 ID、设备编号和 endpoint_id。'},
+ remove: {label:'POST /binding/remove · 移除共用设备', method:'POST', path:'/binding/remove', auth:true, danger:true, fields:[field('device_id','设备数据库编号（留空 / 0 为自己）','','number')], hint:'移除会注销该设备并撤销凭据；其他成员不受影响。'},
+ manage: {label:'POST /device/manage · 重置 / 注销本机', method:'POST', path:'/device/manage', auth:true, danger:true, fields:[field('action','操作','reset_rsa','action'),field('expected_public_key','当前 RSA 公钥（PEM）','','textarea'),field('new_device_key','新设备 ID（reset_all）'),field('public_key','新 RSA 公钥（重置时）','','textarea')], hint:'reset_rsa 只换密钥；reset_all 同时换本机凭据并恢复独立推送 ID；unregister 注销本机。当前公钥用于避免操作过期设备状态。'}
 };
-
-function selectWebhook(type) {
-  currentWebhook = type;
-  document.querySelectorAll('.wh-type').forEach(el => el.classList.toggle('active', el.dataset.wh === type));
-  const tpl = WH_TEMPLATES[type];
-  document.getElementById('webhookPayload').value = JSON.stringify(tpl.payload, null, 2);
+const adminApis = {
+ login:{label:'POST /admin/api/login · 登录',method:'POST',path:'/admin/api/login',fields:[field('username','用户名'),field('password','密码','','password')]},
+ logout:{label:'POST /admin/api/logout · 退出',method:'POST',path:'/admin/api/logout',fields:[]},
+ dashboard:{label:'GET /admin/api/dashboard · 统计',method:'GET',path:'/admin/api/dashboard',fields:[]},
+ devices:{label:'GET /admin/api/devices · 设备列表',method:'GET',path:'/admin/api/devices',fields:[field('q','搜索词'),field('page','页码','1','number'),field('limit','每页数量','50','number')]},
+ logs:{label:'GET /admin/api/logs · 服务日志',method:'GET',path:'/admin/api/logs',fields:[field('cursor','日志游标','-1','number')]},
+ push:{label:'POST /admin/api/push · 推送任务',method:'POST',path:'/admin/api/push',danger:true,fields:[field('target','接收范围','device','adminTarget'),field('device_id','单台设备编号','','number'),field('device_ids','多台设备编号（逗号分隔）'),field('title','标题','后台测试'),field('body','正文','后台接口测试消息','textarea'),field('markdown','Markdown（可选）','','textarea'),field('id','消息 ID（更新 / 删除）'),field('delete','删除（0 / 1）','0','flag'),field('group','分组','测试'),field('url','跳转链接'),field('image','图片 URL / Base64'),field('icon','图标 URL'),field('sound','声音'),field('badge','角标','','number')]},
+ job:{label:'GET /admin/api/push/:id · 任务进度',method:'GET',path:'/admin/api/push/:id',fields:[field('job_id','任务 ID')]}
+};
+const choices = {platform:['pc','mobile'],action:['reset_rsa','reset_all','unregister'],adminTarget:['device','devices','all'],flag:['0','1']};
+const drafts = {device:{},admin:{}};
+let lastApi = {device:null,admin:null};
+function renderApi(scope) {
+ const selected = val(scope+'Api'), definitions = scope === 'device' ? deviceApis : adminApis;
+ if(lastApi[scope]) drafts[scope][lastApi[scope]] = readFields(scope);
+ lastApi[scope] = selected;
+ const api = definitions[selected], container = $(scope+'Fields'); container.replaceChildren();
+ for(const spec of api.fields) {
+  const wrap = document.createElement('div'); wrap.className='field';
+  const label = document.createElement('label'); label.htmlFor=scope+'_'+spec.key; label.textContent=spec.label;
+  const input = document.createElement(choices[spec.type] ? 'select' : spec.type === 'textarea' ? 'textarea' : 'input');
+  input.id=label.htmlFor; input.dataset.key=spec.key; input.dataset.type=spec.type;
+  if(choices[spec.type]) for(const item of choices[spec.type]) input.add(new Option(item,item));
+  else if(spec.type !== 'textarea') input.type=spec.type;
+  if(spec.key==='group')input.setAttribute('list','groups');
+  input.autocomplete='off'; input.value=drafts[scope][selected]?.[spec.key] ?? spec.value;
+  wrap.append(label,input);container.append(wrap);
+ }
+ if(scope==='device') {
+  $('deviceHint').textContent=api.hint;
+  $('generateIdentity').hidden=selected!=='register';
+  $('generateReplacement').hidden=selected!=='manage';
+  if(selected==='register' && identity) {setField(scope,'device_key',identity.deviceKey);setField(scope,'public_key',identity.publicKey);setField(scope,'platform','pc');}
+  if(selected==='request' && !val('device_group_key')) setField(scope,'group_key',val('pushKey'));
+  if(selected==='verify' && !val('device_new_device_key')) setField(scope,'new_device_key',randomID());
+  if(selected==='manage' && identity && identity.deviceKey===val('credential') && !val('device_expected_public_key')) setField(scope,'expected_public_key',identity.publicKey);
+ }
 }
-
-function formatPayload() {
-  try {
-    const v = document.getElementById('webhookPayload').value;
-    document.getElementById('webhookPayload').value = JSON.stringify(JSON.parse(v), null, 2);
-  } catch { /* invalid JSON */ }
+function setField(scope,key,value){const input=$(scope+'_'+key);if(input)input.value=value;}
+function readFields(scope){return Object.fromEntries([...$(scope+'Fields').querySelectorAll('[data-key]')].map(input=>[input.dataset.key,input.value.trim()]));}
+for(const scope of ['device','admin']) {
+ const apis=scope==='device'?deviceApis:adminApis;
+ for(const [key,api] of Object.entries(apis)) $(scope+'Api').add(new Option(api.label,key));
+ $(scope+'Api').addEventListener('change',()=>renderApi(scope));renderApi(scope);
 }
+for(const button of document.querySelectorAll('[data-tab]')) button.addEventListener('click',()=>{
+ for(const item of document.querySelectorAll('[data-tab]'))item.setAttribute('aria-selected',String(item===button));
+ for(const panel of document.querySelectorAll('.panel'))panel.hidden=panel.id!=='panel-'+button.dataset.tab;
+ $('notice').textContent='';
+});
+// Notification channels use the existing group field, not a separate priority value.
+function syncCategory() {
+ const group = val('group').toLowerCase();
+ const names = {'重要提醒':'important', '工作通知':'work', '生活通知':'life'};
+ $('category').value = !group || group === '普通消息' ? '' : names[group] || (['important','work','life'].includes(group) ? group : 'custom');
+}
+$('category').addEventListener('change', () => {
+ if (val('category') === 'custom') { $('group').value = ''; $('group').focus(); }
+ else $('group').value = val('category');
+});
+$('group').addEventListener('input', syncCategory);
 
-// initialize webhook tab
-selectWebhook('generic');
-
-// ── Send helpers ──
-async function doRequest(method, url, body, buttonId) {
-  const btn = document.getElementById(buttonId);
-  if (btn) { btn.disabled = true; btn.classList.add('loading'); }
-
-  setStatus('sending');
-  const start = Date.now();
-
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  if (body !== null) opts.body = JSON.stringify(body);
-
-  try {
-    const res = await fetch(url, opts);
-    const elapsed = Date.now() - start;
-    let resBody = await res.text();
-    try { resBody = JSON.parse(resBody); } catch {}
-    setStatus(res.ok ? 'ok' : 'error', res.status, elapsed);
-    addLog(method, url, body, res.status, resBody, elapsed);
-  } catch (err) {
-    const elapsed = Date.now() - start;
-    setStatus('error', 0, elapsed);
-    addLog(method, url, body, 0, { error: err.message }, elapsed);
+function parsePushLink(text) {
+ let url;
+ try { url = new URL(text.trim()); } catch { throw Error('请粘贴完整的 HTTP / HTTPS 推送链接'); }
+ if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash) {
+  throw Error('推送链接不能包含登录信息或 # 片段');
+ }
+ const match = url.pathname.match(/^(.*)\/push\/([^/]+)(?:\/(.*))?$/);
+ if (!match) throw Error('链接格式应为 https://服务器/push/推送ID');
+ let key, path;
+ try { key = decodeURIComponent(match[2]); path = match[3] ? match[3].split('/').map(decodeURIComponent) : []; }
+ catch { throw Error('链接中的百分号编码不完整'); }
+ if (!key || /[\s/?#]/.test(key)) throw Error('链接中的推送 ID 无效');
+ const fields = {title:'Accnotify 测试通知',body:'这是一条接口测试消息。',group:'',messageId:'',markdown:'',url:'',image:'',icon:'',sound:'',badge:''};
+ if (path.length === 1) { fields.title = 'Accnotify'; fields.body = path[0]; }
+ else if (path.length > 1) { fields.title = path[0]; fields.body = path.slice(1).join('/'); }
+ const mapping = {title:'title',body:'body',group:'group',id:'messageId',markdown:'markdown',url:'url',image:'image',icon:'icon',sound:'sound',badge:'badge'};
+ const query = url.searchParams;
+ // Like the public API, non-empty query values override path values.
+ for (const [param, input] of Object.entries(mapping)) if (query.get(param)) fields[input] = query.get(param);
+ if (query.has('encryption') || query.has('nonce') || query.has('ciphertext')) {
+  throw Error('这是已加密的推送链接，请使用明文参数链接；发送端加密可在推送页配置');
+ }
+ const known = new Set([...Object.keys(mapping),'target','delete']);
+ const unknown = [...new Set([...query.keys()].filter(key => !known.has(key)))];
+ return {server:url.origin + match[1], key, fields, target:query.get('target') || 'all',
+  operation:['1','true'].includes(query.get('delete')) ? 'delete' : 'send',
+  transport:query.get('delete') || (path.length === 1 && query.get('title')) ? 'query' : path.length > 1 ? 'path' : path.length ? 'body-path' : query.size ? 'query' : 'json', unknown};
+}
+function importPushLink(text) {
+ // Parse completely before changing any fields; never treat a push ID as a device credential.
+ const parsed = parsePushLink(text);
+ $('server').value = parsed.server;
+ $('pushKey').value = parsed.key;
+ $('target').value = parsed.target;
+ for (const [id, value] of Object.entries(parsed.fields)) $(id).value = value;
+ $('operation').value = parsed.operation;
+ $('transport').value = parsed.transport;
+ $('encrypt').checked = false;
+ $('imageFile').value = '';
+ syncCategory();
+ $('linkStatus').textContent = '已拆分服务器、推送 ID 和消息参数，尚未发送。' +
+  (parsed.unknown.length ? '未导入的参数：' + parsed.unknown.join('、') : '');
+}
+$('pushLink').addEventListener('input', () => {
+ if (!val('pushLink')) { $('linkStatus').textContent = ''; return; }
+ try { importPushLink(val('pushLink')); } catch (error) { $('linkStatus').textContent = error.message; }
+});
+// Also accept the full push link directly in the server field.
+$('server').addEventListener('paste', event => {
+ const text = event.clipboardData?.getData('text')?.trim();
+ if (!text || !/^https?:\/\//i.test(text) || !text.includes('/push/')) return;
+ event.preventDefault();
+ try { importPushLink(text); $('pushLink').value = text; }
+ catch (error) { $('linkStatus').textContent = error.message; }
+});
+function server(id='server'){const url=new URL(val(id));if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.search||url.hash)throw Error('请填写不含凭据、查询参数或片段的 HTTP / HTTPS 服务器地址');return url.href.replace(/\/+$/,'');}
+function required(id,label){const value=val(id);if(!value)throw Error('请填写'+label);return value;}
+function addLog(method,url,request,status,response,ms=0){
+ $('empty').hidden=true;const entry=document.createElement('details');entry.className='log '+(status>=200&&status<300?'ok':'error');entry.open=true;
+ const summary=document.createElement('summary');summary.textContent=`${method} ${url} · ${status||'失败'} · ${ms}ms`;
+ const time=document.createElement('small');time.textContent=new Date().toLocaleTimeString('zh-CN');entry.append(summary,time);
+ for(const [label,data] of [['请求',request],['响应 / 消息',response]])if(data!==null&&data!==undefined){const heading=document.createElement('div');heading.textContent=label;const pre=document.createElement('pre');pre.textContent=typeof data==='string'?data:JSON.stringify(data,(key,value)=>key==='password'?'[已隐藏]':typeof value==='string'&&value.startsWith('data:image')&&value.length>160?value.slice(0,80)+'…[图片已省略]':value,2);entry.append(heading,pre);}
+ $('logList').prepend(entry);while($('logList').childElementCount>100)$('logList').lastChild.remove();
+}
+async function request(method,url,payload,{auth=false,admin=false,form=false,headers={}}={}){
+ const options={method,headers:{...headers},credentials:admin?'same-origin':'omit',signal:AbortSignal.timeout(20000)};
+ if(auth)options.headers.Authorization='Bearer '+required('credential','本机设备凭据');
+ if(payload!==null&&method!=='GET'){options.headers['Content-Type']=form?'application/x-www-form-urlencoded':'application/json';options.body=form?new URLSearchParams(payload).toString():JSON.stringify(payload);}
+ const start=Date.now();let logged=false;$('status').textContent='请求中…';
+ try{const res=await fetch(url,options);let result=await res.text();try{result=JSON.parse(result);}catch{}
+ addLog(method,url,payload,res.status,result,Date.now()-start);logged=true;$('status').textContent=`HTTP ${res.status} · ${Date.now()-start}ms`;
+ if(!res.ok)throw Error(typeof result==='object'&&result.error?result.error:'请求失败，查看响应日志');return result;
+ }catch(error){if(!logged){addLog(method,url,payload,0,{error:error.message,hint:'检查地址、网络、HTTPS 页面访问 HTTP 限制及 CORS。'},Date.now()-start);$('status').textContent='请求失败';}throw error;}
+}
+function action(id,handler){$(id).addEventListener('click',async()=>{const button=$(id);button.disabled=true;$('notice').textContent='';try{await handler();}catch(error){$('notice').textContent=error.message;}finally{button.disabled=false;}});}
+function randomID(){const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';let id='';while(id.length<32){for(const byte of crypto.getRandomValues(new Uint8Array(32)))if(byte<248&&id.length<32)id+=alphabet[byte%62];}return id;}
+function bytes64(bytes){let result='';for(const byte of new Uint8Array(bytes))result+=String.fromCharCode(byte);return btoa(result);}
+function from64(value){return Uint8Array.from(atob(value),c=>c.charCodeAt(0));}
+function cryptoReady(){if(!crypto.subtle)throw Error('加密功能需要 HTTPS 或本地文件 / localhost 安全环境');}
+async function keypair(){cryptoReady();const keys=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},false,['encrypt','decrypt']);const der=bytes64(await crypto.subtle.exportKey('spki',keys.publicKey));return {deviceKey:randomID(),privateKey:keys.privateKey,publicKey:'-----BEGIN PUBLIC KEY-----\n'+der.match(/.{1,64}/g).join('\n')+'\n-----END PUBLIC KEY-----'};}
+async function aesKey(usage){cryptoReady();const hex=val('senderKey');if(!/^[a-fA-F0-9]{64}$/.test(hex))throw Error('发送端密钥需要 64 位十六进制字符');return crypto.subtle.importKey('raw',Uint8Array.from(hex.match(/../g),x=>parseInt(x,16)),'AES-GCM',false,[usage]);}
+async function encrypt(payload){const key=await aesKey('encrypt'),nonce=crypto.getRandomValues(new Uint8Array(12));const {target,...content}=payload;const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv:nonce},key,new TextEncoder().encode(JSON.stringify(content)));return {target,encryption:'aes-256-gcm',nonce:bytes64(nonce),ciphertext:bytes64(ciphertext)};}
+function buildPush(payload,transport,base,key){
+ let url=base+'/push/'+enc(key),method=transport.startsWith('post-')||['json','form'].includes(transport)?'POST':'GET';const data={...payload};
+ if(['path','body-path'].includes(transport)){if(data.encryption)throw Error('加密消息请使用 JSON、表单或查询参数方式');if(!data.body)throw Error('路径方式需要填写正文');url+='/'+(transport==='path'?enc(data.title||'Accnotify')+'/':'')+enc(data.body);delete data.title;delete data.body;}
+ if(!['json','form'].includes(transport)){const query=new URLSearchParams(data).toString();if(query)url+='?'+query;return {method,url,body:method==='POST'?{}:null,options:{}};}
+ return {method,url,body:data,options:{form:transport==='form'}};
+}
+action('sendPush',async()=>{
+ const base=server(),key=required('pushKey','推送 ID');let payload={target:val('target')||'all'};
+ if(val('operation')==='delete'){payload.id=required('messageId','要删除的消息 ID');payload.delete='1';if(!confirm('确认向选中的设备发送删除消息指令？'))return;}
+ else {for(const [input,key] of Object.entries({title:'title',body:'body',messageId:'id',group:'group',markdown:'markdown',url:'url',image:'image',icon:'icon',sound:'sound',badge:'badge'}))if(val(input))payload[key]=key==='badge'?Number(val(input)):val(input);if(!payload.body&&!payload.markdown)throw Error('请填写正文或 Markdown');}
+ if($('encrypt').checked)payload=await encrypt(payload);
+ const result=buildPush(payload,val('transport'),base,key);await request(result.method,result.url,result.body,result.options);
+});
+$('imageFile').addEventListener('change',()=>{const file=$('imageFile').files[0];if(!file)return;if(file.size>2*1024*1024){$('notice').textContent='请选择小于 2 MB 的图片，Base64 会增大请求体';return;}const reader=new FileReader();reader.onload=()=>{$('image').value=reader.result;};reader.onerror=()=>{$('notice').textContent='读取图片失败';};reader.readAsDataURL(file);});
+const gitPayload={ref:'refs/heads/main',repository:{name:'demo',full_name:'team/demo',html_url:'https://example.com/demo'},pusher:{name:'tester',login:'tester'},head_commit:{message:'测试提交',author:{name:'tester'}},commits:[{message:'测试提交',author:{name:'tester'}}]};
+const templates={generic:{title:'通用测试',body:'Webhook 测试消息',group:'测试'},github:gitPayload,gitea:gitPayload,forgejo:gitPayload,gitlab:{object_kind:'push',ref:'refs/heads/main',user_name:'tester',project:{name:'demo',web_url:'https://example.com/demo'},commits:[{message:'测试提交',author:{name:'tester'}}]},docker:{push_data:{pusher:'tester',tag:'latest'},repository:{repo_name:'team/demo',repo_url:'https://example.com/demo'}},feishu:{msg_type:'text',content:{text:'飞书测试消息'}},dingtalk:{msgtype:'markdown',markdown:{title:'钉钉测试',text:'## 钉钉测试\n消息正文'}},wecom:{msgtype:'text',text:{content:'企业微信测试消息'}}};
+function webhookTemplate(){const type=val('webhookType');$('webhookPayload').value=JSON.stringify(templates[type],null,2);$('webhookEvent').value='';}
+$('webhookType').addEventListener('change',webhookTemplate);action('webhookTemplate',webhookTemplate);webhookTemplate();
+action('formatWebhook',()=>{$('webhookPayload').value=JSON.stringify(JSON.parse(val('webhookPayload')),null,2);});
+action('sendWebhook',async()=>{const type=val('webhookType'),payload=JSON.parse(val('webhookPayload')),headers={};const name={github:'X-GitHub-Event',gitlab:'X-Gitlab-Event',gitea:'X-Gitea-Event',forgejo:'X-Forgejo-Event'}[type];if(name&&val('webhookEvent')){if(location.origin!==new URL(server()).origin)throw Error('跨域请求不支持事件头，请清空事件名称或同源打开测试页');headers[name]=val('webhookEvent');}const url=server()+'/webhook/'+enc(required('pushKey','推送 ID'))+(type==='generic'?'':'/'+type)+'?'+new URLSearchParams({target:val('target')||'all'});await request('POST',url,payload,{headers});});
+action('generateIdentity',async()=>{if(identity&&!confirm('生成新的测试设备会替换当前页私钥，旧设备将无法在此解密。继续？'))return;disconnect();identity=await keypair();pendingIdentity=null;$('credential').value=identity.deviceKey;$('pushKey').value=identity.deviceKey;setField('device','device_key',identity.deviceKey);setField('device','public_key',identity.publicKey);setField('device','platform','pc');$('status').textContent='已生成，尚未注册';});
+action('generateReplacement',async()=>{pendingIdentity=await keypair();setField('device','new_device_key',pendingIdentity.deviceKey);setField('device','public_key',pendingIdentity.publicKey);$('status').textContent='已生成，尚未重置';});
+action('sendDevice',async()=>{
+ const name=val('deviceApi'),api=deviceApis[name],base=server(),raw=readFields('device');const payload=Object.fromEntries(Object.entries(raw).filter(([,v])=>v!==''));
+ if(payload.device_id!==undefined)payload.device_id=Number(payload.device_id);
+ const oldKey=val('credential');if(name==='manage')payload.device_key=required('credential','本机设备凭据');
+ if(name==='register' && identity && payload.device_key===identity.deviceKey && (payload.public_key!==identity.publicKey||payload.platform!=='pc'))throw Error('当前页生成的测试身份必须使用配套电脑公钥');
+ if(name==='register'&&!confirm('确认注册此设备？请确保不是现有手机的凭据，以免覆盖其公钥。'))return;
+ if(api.danger&&!confirm('此操作会重置或注销所选设备，并断开连接。确认继续？'))return;
+ const result=await request(api.method,base+api.path,api.method==='GET'?null:payload,{auth:api.auth});
+ if(!result||!result.success)return;
+ if(name==='request'){drafts.device.verify={...(drafts.device.verify||{}),request_id:result.request_id};}
+ if(name==='verify'){disconnect();$('credential').value=result.device_key;$('pushKey').value=result.push_key;if(identity?.deviceKey===oldKey)identity.deviceKey=result.device_key;}
+ if(name==='status'){$('pushKey').value=result.push_key;selfDevice={key:oldKey,id:result.devices?.find(device=>device.is_self)?.id};}
+ if(name==='register'){$('credential').value=payload.device_key;if(result.push_key)$('pushKey').value=result.push_key;else if(!val('pushKey'))$('pushKey').value=payload.device_key;}
+ if(name==='manage'){
+  disconnect();if(payload.action==='unregister'){$('credential').value='';if(identity?.deviceKey===oldKey)identity=null;}
+  else {if(pendingIdentity&&pendingIdentity.publicKey===payload.public_key){identity={...pendingIdentity,deviceKey:payload.action==='reset_all'?payload.new_device_key:oldKey};pendingIdentity=null;}else if(identity?.deviceKey===oldKey)identity=null;
+   if(payload.action==='reset_all'){$('credential').value=payload.new_device_key;$('pushKey').value=payload.new_device_key;}
+   setField('device','expected_public_key',payload.public_key);setField('device','public_key','');setField('device','new_device_key','');
   }
-
-  if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+ }
+ if(name==='remove'&&(!payload.device_id||(selfDevice?.key===oldKey&&selfDevice.id===payload.device_id))){disconnect();$('credential').value='';if(identity?.deviceKey===oldKey)identity=null;selfDevice=null;}
+});
+function disconnect(){if(socket){const old=socket;socket=null;old.close();}receivedIds.clear();$('ackId').value='';}
+async function decryptDelivery(data,session){
+ let key,nonce,ciphertext;
+ if(data.encryption){if(data.encryption!=='aes-256-gcm')throw Error('未知加密算法');key=await aesKey('decrypt');nonce=from64(data.nonce);ciphertext=from64(data.ciphertext);}
+ else {if(!session)throw Error('缺少当前设备私钥，仅展示原始密文');const bytes=from64(data.encrypted_content),size=(bytes[0]<<8)|bytes[1];if(size<256||size>512||bytes.length<=size+30)throw Error('RSA 消息格式无效');const raw=await crypto.subtle.decrypt('RSA-OAEP',session.privateKey,bytes.slice(2,2+size));key=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);nonce=bytes.slice(2+size,14+size);ciphertext=bytes.slice(14+size);}
+ return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:nonce},key,ciphertext)));
 }
-
-// ── Send functions ──
-function sendPush() {
-  if (!validate()) return;
-  const payload = {};
-  const title = document.getElementById('pushTitle').value.trim();
-  const body = document.getElementById('pushBody').value.trim();
-  const group = document.getElementById('pushGroup').value.trim();
-  const sound = document.getElementById('pushSound').value.trim();
-  const url = document.getElementById('pushUrl').value.trim();
-  if (title) payload.title = title;
-  if (body)  payload.body  = body;
-  if (group) payload.group = group;
-  if (sound) payload.sound = sound;
-  if (url)   payload.url   = url;
-  doRequest('POST', `${getServer()}/push/${getDeviceKey()}`, payload, 'btnSendPush');
-}
-
-function sendImage() {
-  if (!validate()) return;
-  const payload = {};
-  const title = document.getElementById('imgTitle').value.trim();
-  const body  = document.getElementById('imgBody').value.trim();
-  if (title) payload.title = title;
-  if (body)  payload.body  = body;
-
-  if (base64ImageData) {
-    payload.image = base64ImageData;
-  } else {
-    const imgUrl = document.getElementById('imgUrl').value.trim();
-    if (!imgUrl) { alert('请选择图片或填写图片 URL'); return; }
-    payload.image = imgUrl;
-  }
-
-  doRequest('POST', `${getServer()}/push/${getDeviceKey()}`, payload, 'btnSendImg');
-}
-
-function sendWebhook() {
-  if (!validate()) return;
-  let payload;
-  try {
-    payload = JSON.parse(document.getElementById('webhookPayload').value);
-  } catch {
-    alert('JSON 格式错误，请检查 Payload'); return;
-  }
-
-  const tpl = WH_TEMPLATES[currentWebhook];
-  const path = tpl.path.replace('DEVICE_KEY', getDeviceKey());
-  doRequest('POST', getServer() + path, payload, 'btnSendWh');
-}
-
-function sendSimple() {
-  if (!validate()) return;
-  const title = encodeURIComponent(document.getElementById('simpleTitle').value || 'test');
-  const body  = encodeURIComponent(document.getElementById('simpleBody').value || 'hello');
-  const url = `${getServer()}/push/${getDeviceKey()}/${title}/${body}`;
-
-  setStatus('sending');
-  const start = Date.now();
-  const btn = document.querySelector('#tab-simple .btn-send');
-  btn.disabled = true; btn.classList.add('loading');
-
-  fetch(url).then(async res => {
-    const elapsed = Date.now() - start;
-    let rb = await res.text();
-    try { rb = JSON.parse(rb); } catch {}
-    setStatus(res.ok ? 'ok' : 'error', res.status, elapsed);
-    addLog('GET', url, null, res.status, rb, elapsed);
-  }).catch(err => {
-    setStatus('error', 0, Date.now() - start);
-    addLog('GET', url, null, 0, { error: err.message }, 0);
-  }).finally(() => { btn.disabled = false; btn.classList.remove('loading'); });
-}
-
-// ── Status ──
-function setStatus(state, code, ms) {
-  const pill = document.getElementById('statusPill');
-  const text = document.getElementById('statusText');
-  pill.className = 'status-pill';
-  if (state === 'sending') { text.textContent = 'sending...'; return; }
-  if (state === 'ok')  { pill.classList.add('ok');  text.textContent = `${code} · ${ms}ms`; }
-  if (state === 'error') { pill.classList.add('err'); text.textContent = code ? `${code} · ${ms}ms` : 'network error'; }
-}
-
-// ── Log ──
-function clearLog() {
-  document.getElementById('responseBody').innerHTML = `
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon">📡</div>
-      <div class="empty-text">填写连接配置后发送请求，在此查看响应</div>
-    </div>`;
-  document.getElementById('statusPill').className = 'status-pill';
-  document.getElementById('statusText').textContent = 'idle';
-}
-
-function addLog(method, url, reqBody, statusCode, resBody, elapsed) {
-  const container = document.getElementById('responseBody');
-  const empty = document.getElementById('emptyState');
-  if (empty) empty.remove();
-
-  const isOk = statusCode >= 200 && statusCode < 300;
-  const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
-
-  const entry = document.createElement('div');
-  entry.className = 'log-entry';
-
-  let reqSection = '';
-  if (reqBody !== null) {
-    reqSection = `<div class="log-section-title">Request Body</div><pre>${syntaxHL(reqBody)}</pre>`;
-  }
-
-  entry.innerHTML = `
-    <div class="log-head">
-      <span class="log-method">${method}</span>
-      <span class="log-url">${url}</span>
-      <span class="log-badge ${isOk ? 'ok' : 'err'}">${statusCode || 'ERR'}</span>
-      <span class="log-time">${elapsed}ms · ${now}</span>
-    </div>
-    <div class="log-body">
-      ${reqSection}
-      <div class="log-section-title">Response</div>
-      <pre>${syntaxHL(resBody)}</pre>
-    </div>`;
-
-  const head = entry.querySelector('.log-head');
-  const body = entry.querySelector('.log-body');
-  head.addEventListener('click', () => {
-    body.style.display = body.style.display === 'none' ? '' : 'none';
-  });
-
-  container.insertBefore(entry, container.firstChild);
-}
-
-function syntaxHL(obj) {
-  if (obj === null || obj === undefined) return '<span class="json-null">null</span>';
-  let str;
-  if (typeof obj === 'string') {
-    str = obj;
-  } else {
-    str = JSON.stringify(obj, (k, v) => {
-      if (typeof v === 'string' && v.startsWith('data:image') && v.length > 120) {
-        return v.slice(0, 80) + `…[${formatBytes(Math.ceil(v.length * 0.75))}]`;
-      }
-      return v;
-    }, 2);
-  }
-  return str.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
-    let cls = 'json-num';
-    if (/^"/.test(m)) cls = /:$/.test(m) ? 'json-key' : 'json-str';
-    else if (/true|false/.test(m)) cls = 'json-bool';
-    else if (/null/.test(m)) cls = 'json-null';
-    return `<span class="${cls}">${m}</span>`;
-  });
-}
-
-// ── Init ──
-updateSimplePreview();
+action('connectWs',()=>{const base=server(),key=required('credential','本机设备凭据');if(!confirm('连接会替换这台设备的现有在线连接。确认继续？'))return;disconnect();const url=new URL(base+'/ws');url.protocol=url.protocol==='https:'?'wss:':'ws:';url.searchParams.set('key',key);const ws=new WebSocket(url);socket=ws;const session=identity?.deviceKey===key?identity:null;
+ ws.onopen=()=>{if(socket===ws){$('status').textContent='WebSocket 已连接';addLog('WS',base+'/ws',null,200,'连接成功');}};
+ ws.onclose=event=>{if(socket!==ws)return;socket=null;receivedIds.clear();$('status').textContent='WebSocket 已断开';addLog('WS',base+'/ws',null,event.wasClean?200:0,{event:'close',code:event.code,reason:event.reason});};
+ ws.onerror=()=>{if(socket===ws){$('notice').textContent='WebSocket 连接失败，请检查地址和本机凭据';addLog('WS',base+'/ws',null,0,'连接失败');}};
+ ws.onmessage=async event=>{if(socket!==ws)return;try{const message=JSON.parse(event.data);if(message.type==='ping'){ws.send(JSON.stringify({type:'pong'}));return;}addLog('WS',base+'/ws',null,200,message);if(message.type==='message'){receivedIds.add(message.id);$('ackId').value=message.id;try{const decoded=await decryptDelivery(message.data,session);if(socket===ws)addLog('解密',message.id,null,200,decoded);}catch(error){if(socket===ws)addLog('解密',message.id,null,0,{error:error.message});}}}catch(error){addLog('WS',base+'/ws',null,0,{error:error.message,raw:String(event.data)});}};
+});
+action('disconnectWs',()=>{disconnect();$('status').textContent='WebSocket 已断开';});
+function sendFrame(frame){if(!socket||socket.readyState!==WebSocket.OPEN)throw Error('请先连接 WebSocket');socket.send(JSON.stringify(frame));addLog('WS 发送','/ws',frame,200,'已发送，服务端无 ACK 响应');}
+action('sendAck',()=>{const id=required('ackId','投递 ID');if(!receivedIds.has(id))throw Error('请使用本次连接实际收到的投递 ID');if(!confirm('ACK 会删除服务端待投递记录；此页面没有持久化历史。确认？'))return;sendFrame({type:'ack',id});receivedIds.delete(id);});
+action('sendFrame',()=>{const frame=JSON.parse(val('wsFrame'));if(frame.type==='ack'){if(!confirm('确认发送 ACK？服务端将移除对应待投递记录。'))return;}sendFrame(frame);});
+action('sendAdmin',async()=>{
+ const base=server('adminServer');if(location.origin!==new URL(base).origin)throw Error('后台接口需要测试页与后台同源。请在后台相同协议、主机和端口下打开测试页。');
+ const name=val('adminApi'),api=adminApis[name],raw=readFields('admin');const payload=Object.fromEntries(Object.entries(raw).filter(([,v])=>v!==''));
+ for(const key of ['device_id','page','limit','cursor','badge'])if(key in payload)payload[key]=Number(payload[key]);
+ if(name==='push'){
+  if(payload.target==='devices'){payload.device_ids=(payload.device_ids||'').split(',').map(x=>Number(x.trim()));if(payload.device_ids.some(x=>!Number.isInteger(x)||x<=0))throw Error('请输入逗号分隔的正整数设备编号');delete payload.device_id;}
+  else {delete payload.device_ids;if(payload.target==='all')delete payload.device_id;}
+  if(!confirm(payload.target==='all'?'确认向服务器全部设备发送此消息操作？':'确认向选中设备发送此消息操作？'))return;
+  if(payload.target==='all')payload.confirm_all=true;
+ }
+ let path=api.path;if(name==='job'){path=path.replace(':id',enc(payload.job_id||''));if(!payload.job_id)throw Error('请填写任务 ID');delete payload.job_id;}
+ let url=base+path;if(api.method==='GET'&&Object.keys(payload).length)url+='?'+new URLSearchParams(payload);
+ const result=await request(api.method,url,api.method==='GET'?null:payload,{admin:true});
+ if(name==='push'&&result.job_id)drafts.admin.job={job_id:result.job_id};
+});
+action('clearLog',()=>{$('logList').replaceChildren();$('empty').hidden=false;$('notice').textContent='';});
+window.addEventListener('pagehide',disconnect);
 </script>
 </body>
 </html>

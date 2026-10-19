@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:colorBackground"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="@dimen/spacing_small">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="@dimen/action_touch_size"
+            android:layout_height="@dimen/action_touch_size"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:contentDescription="返回"
+            android:focusable="true"
+            android:padding="@dimen/action_icon_padding"
+            android:rotation="180"
+            android:src="@drawable/ic_fluent_chevron_right"
+            app:tint="?attr/colorOnSurface" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_small"
+            android:text="@string/keep_alive_title"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="@dimen/keep_alive_title_size"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:padding="@dimen/spacing_card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.Accnotify.KeepAliveInstruction"
+                android:text="@string/keep_alive_step_autostart" />
+
+            <ImageView
+                style="@style/Widget.Accnotify.KeepAliveScreenshot"
+                android:contentDescription="手机设置中的自启动入口"
+                android:src="@drawable/keep_alive_autostart" />
+
+            <View style="@style/Widget.Accnotify.KeepAliveDivider" />
+
+            <TextView
+                style="@style/Widget.Accnotify.KeepAliveInstruction"
+                android:text="@string/keep_alive_step_background" />
+
+            <ImageView
+                style="@style/Widget.Accnotify.KeepAliveScreenshot"
+                android:contentDescription="完全允许后台行为设置"
+                android:src="@drawable/keep_alive_background" />
+
+            <TextView
+
+                android:paddingVertical="@dimen/control_padding_vertical"
+
+                android:minHeight="@dimen/control_height"
+
+                android:textSize="@dimen/text_control"
+                android:id="@+id/btnAppSettings"
+                style="@style/Widget.Accnotify.KeepAliveAction"
+                android:text="应用设置" />
+
+            <View style="@style/Widget.Accnotify.KeepAliveDivider" />
+
+            <TextView
+                style="@style/Widget.Accnotify.KeepAliveInstruction"
+                android:text="@string/keep_alive_step_accessibility" />
+
+            <ImageView
+                style="@style/Widget.Accnotify.KeepAliveScreenshot"
+                android:contentDescription="Accnotify 无障碍服务设置"
+                android:src="@drawable/keep_alive_accessibility" />
+
+            <TextView
+
+                android:paddingVertical="@dimen/control_padding_vertical"
+
+                android:minHeight="@dimen/control_height"
+
+                android:textSize="@dimen/text_control"
+                android:id="@+id/btnAccessibilitySettings"
+                style="@style/Widget.Accnotify.KeepAliveAction"
+                android:text="无障碍设置" />
+
+            <View style="@style/Widget.Accnotify.KeepAliveDivider" />
+
+            <TextView
+                style="@style/Widget.Accnotify.KeepAliveInstruction"
+                android:text="@string/keep_alive_step_battery" />
+
+            <TextView
+
+                android:paddingVertical="@dimen/control_padding_vertical"
+
+                android:minHeight="@dimen/control_height"
+
+                android:textSize="@dimen/text_control"
+                android:id="@+id/btnBatteryOptimization"
+                style="@style/Widget.Accnotify.KeepAliveAction"
+                android:text="电池优化" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

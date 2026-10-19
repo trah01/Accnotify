@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "accnotify-personal",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [{ "name": "DEVICE", "class_name": "PersonalDevice" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PersonalDevice"] }],
+  "observability": { "enabled": false }
+}

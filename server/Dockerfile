@@ -30,7 +30,7 @@ RUN mkdir -p /app/data
 COPY --from=builder /app/accnotify-server .
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8080 8081
 
 # Environment variables
 ENV ACCNOTIFY_HOST=0.0.0.0

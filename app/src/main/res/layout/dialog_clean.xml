@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    style="@style/Widget.Material3.CardView.Elevated"
+    style="@style/Widget.Accnotify.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardBackgroundColor="?attr/colorSurface"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="8dp"
     android:minWidth="300dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="@dimen/spacing_card">
 
         <TextView
             android:id="@+id/dialogTitle"
@@ -21,9 +18,9 @@
             android:layout_height="wrap_content"
             android:text="Dialog Title"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="18sp"
+            android:textSize="@dimen/text_dialog_title"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="@dimen/spacing_small" />
 
         <TextView
             android:id="@+id/dialogMessage"
@@ -31,7 +28,7 @@
             android:layout_height="wrap_content"
             android:text="Dialog Message goes here..."
             android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="14sp"
+            android:textSize="@dimen/text_body"
             android:lineSpacingMultiplier="1.2"
             android:visibility="visible" />
 
@@ -39,40 +36,48 @@
             android:id="@+id/dialogCustomContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/spacing_small"
             android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="@dimen/spacing_gap"
             android:gravity="end"
             android:orientation="horizontal">
 
             <TextView
+
+                android:paddingVertical="@dimen/control_padding_vertical"
+
+                android:minHeight="@dimen/control_height"
                 android:id="@+id/btnNegative"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="wrap_content"
                 android:gravity="center"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/spacing_card"
                 android:text="Cancel"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="14sp"
+                android:textSize="@dimen/text_control"
                 android:textStyle="bold"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:visibility="gone"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="@dimen/spacing_small" />
 
             <TextView
+
+                android:paddingVertical="@dimen/control_padding_vertical"
+
+                android:minHeight="@dimen/control_height"
                 android:id="@+id/btnPositive"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="wrap_content"
                 android:gravity="center"
-                android:paddingHorizontal="20dp"
+                android:paddingHorizontal="@dimen/spacing_card"
                 android:text="Confirm"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
+                android:textColor="@color/action_button_text"
+                android:textSize="@dimen/text_control"
                 android:textStyle="bold"
                 android:background="@drawable/bg_clean_button_primary"
                 android:clickable="true" />

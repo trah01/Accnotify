@@ -11,6 +11,13 @@ val localProps = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
+val clientVersion = rootProject.file("VERSION").readText().trim()
+require(Regex("(0|[1-9]\\d?)\\.(0|[1-9]\\d{0,2})\\.(0|[1-9]\\d{0,2})").matches(clientVersion) && clientVersion != "0.0.0") {
+    "VERSION 必须为 major.minor.patch：major 0–99，minor/patch 0–999，且不能为 0.0.0"
+}
+val versionParts = clientVersion.split('.').map { it.toInt() }
+val clientVersionCode = versionParts[0] * 1_000_000 + versionParts[1] * 1_000 + versionParts[2]
+
 android {
     namespace = "com.trah.accnotify"
     compileSdk = 34
@@ -19,8 +26,8 @@ android {
         applicationId = "com.trah.accnotify"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = clientVersionCode
+        versionName = clientVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         

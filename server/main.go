@@ -11,13 +11,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/accnotify/server/config"
 	"github.com/accnotify/server/handler"
+	"github.com/accnotify/server/logbuffer"
 	"github.com/accnotify/server/storage"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	logs := logbuffer.New(os.Stdout, 1024*1024)
+	log.SetOutput(logs)
+	gin.DefaultWriter = logs
+	gin.DefaultErrorWriter = logs
 	// Load configuration
 	cfg := config.LoadFromEnv()
 
@@ -39,7 +44,8 @@ func main() {
 
 	// Setup Gin router
 	gin.SetMode(gin.ReleaseMode)
-	router := gin.Default()
+	router := gin.New()
+	router.Use(handler.PrivacyRequestLogger(), handler.PrivacyRecovery())
 
 	// CORS middleware
 	router.Use(func(c *gin.Context) {
@@ -56,6 +62,11 @@ func main() {
 	// Routes
 	router.GET("/health", pushHandler.HandleHealth)
 	router.POST("/register", pushHandler.HandleRegister)
+	router.POST("/device/manage", pushHandler.HandleManageDevice)
+	router.POST("/binding/request", pushHandler.HandleBindingRequest)
+	router.POST("/binding/verify", pushHandler.HandleBindingVerify)
+	router.GET("/binding/status", pushHandler.HandleBindingStatus)
+	router.POST("/binding/remove", pushHandler.HandleBindingRemove)
 	router.POST("/push/:device_key", pushHandler.HandlePush)
 	router.GET("/push/:device_key", pushHandler.HandlePush)
 	router.GET("/push/:device_key/*params", handleSimplePushParams(pushHandler))
@@ -71,13 +82,18 @@ func main() {
 		webhookGroup.POST("/gitlab", webhookHandler.HandleGitLabWebhook)
 		webhookGroup.POST("/docker", webhookHandler.HandleDockerHubWebhook)
 		webhookGroup.POST("/gitea", webhookHandler.HandleGiteaWebhook)
+		webhookGroup.POST("/forgejo", webhookHandler.HandleForgejoWebhook)
+		webhookGroup.POST("/feishu", webhookHandler.HandleFeishuWebhook)
+		webhookGroup.POST("/dingtalk", webhookHandler.HandleDingtalkWebhook)
+		webhookGroup.POST("/wecom", webhookHandler.HandleWecomWebhook)
 	}
 
 	// Create server
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: router,
+		Addr:     addr,
+		Handler:  router,
+		ErrorLog: log.Default(),
 	}
 
 	// Start server in goroutine
@@ -95,6 +111,31 @@ func main() {
 	}()
 
 	// Wait for interrupt signal
+	var adminServer *http.Server
+	if cfg.AdminPassword != "" {
+		adminRouter, err := handler.NewAdminRouter(store, hub, logs, cfg.AdminUsername, cfg.AdminPassword, cfg.AdminCookieSecure)
+		if err != nil {
+			log.Printf("Administrator interface disabled: %v", err)
+		} else {
+			adminServer = &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.AdminHost, cfg.AdminPort), Handler: adminRouter, ErrorLog: log.Default(),
+				ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
+			go func() {
+				log.Printf("Administrator interface starting on %s", adminServer.Addr)
+				var err error
+				if cfg.EnableHTTPS {
+					err = adminServer.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
+				} else {
+					err = adminServer.ListenAndServe()
+				}
+				if err != nil && err != http.ErrServerClosed {
+					log.Fatalf("Administrator interface error: %v", err)
+				}
+			}()
+		}
+	} else {
+		log.Println("Administrator interface disabled: ACCNOTIFY_ADMIN_PASSWORD is not configured")
+	}
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -106,6 +147,11 @@ func main() {
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+	if adminServer != nil {
+		if err := adminServer.Shutdown(ctx); err != nil {
+			log.Printf("Administrator shutdown error: %v", err)
+		}
 	}
 
 	log.Println("Server exited")
@@ -120,10 +166,10 @@ func handleSimplePushParams(h *handler.PushHandler) gin.HandlerFunc {
 		if len(params) > 0 && params[0] == '/' {
 			params = params[1:]
 		}
-		
+
 		// Split by /
 		parts := strings.SplitN(params, "/", 2)
-		
+
 		var title, body string
 		if len(parts) == 1 {
 			// Only body provided
@@ -134,7 +180,7 @@ func handleSimplePushParams(h *handler.PushHandler) gin.HandlerFunc {
 			title = parts[0]
 			body = parts[1]
 		}
-		
+
 		c.Params = append(c.Params, gin.Param{Key: "title", Value: title})
 		c.Params = append(c.Params, gin.Param{Key: "body", Value: body})
 		h.HandleSimplePush(c)

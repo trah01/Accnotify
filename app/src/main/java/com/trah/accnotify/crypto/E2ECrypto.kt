@@ -2,12 +2,16 @@ package com.trah.accnotify.crypto
 
 import android.util.Base64
 import java.security.PrivateKey
+import java.security.spec.MGF1ParameterSpec
+import android.util.Log
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import javax.crypto.spec.OAEPParameterSpec
+import javax.crypto.spec.PSource
 
 /**
- * E2E Encryption/Decryption utilities
+ * Public-key message decryption utilities
  * 
  * Message format: Base64(keyLength[2 bytes] + RSA(AESKey) + Nonce[12 bytes] + AES-GCM(content))
  */
@@ -27,9 +31,13 @@ object E2ECrypto {
     fun decrypt(encryptedContent: String, privateKey: PrivateKey): String {
         // Decode base64
         val data = Base64.decode(encryptedContent, Base64.DEFAULT)
+        require(data.size >= 2 + NONCE_SIZE + GCM_TAG_LENGTH / 8) { "Invalid encrypted message length" }
 
         // Extract key length (first 2 bytes, big-endian)
         val keyLength = ((data[0].toInt() and 0xFF) shl 8) or (data[1].toInt() and 0xFF)
+        require(keyLength > 0 && data.size >= 2 + keyLength + NONCE_SIZE + GCM_TAG_LENGTH / 8) {
+            "Invalid encrypted key length"
+        }
 
         // Extract encrypted AES key
         val encryptedAESKey = data.sliceArray(2 until 2 + keyLength)
@@ -42,8 +50,12 @@ object E2ECrypto {
 
         // Decrypt AES key with RSA-OAEP
         val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
-        rsaCipher.init(Cipher.DECRYPT_MODE, privateKey)
+        // Older Android Keystore devices require SHA-1 for MGF1 even when
+        // the OAEP digest is SHA-256. Never rely on provider defaults.
+        val oaepSpec = OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT)
+        rsaCipher.init(Cipher.DECRYPT_MODE, privateKey, oaepSpec)
         val aesKey = rsaCipher.doFinal(encryptedAESKey)
+        require(aesKey.size == AES_KEY_SIZE) { "Invalid AES key length" }
 
         // Decrypt message with AES-GCM
         val aesKeySpec = SecretKeySpec(aesKey, "AES")
@@ -63,6 +75,8 @@ object E2ECrypto {
         return try {
             decrypt(encryptedContent, privateKey)
         } catch (e: Exception) {
+            // Record the failure type without logging message content or keys.
+            Log.e("E2ECrypto", "Message decryption failed: ${e.javaClass.simpleName}")
             null
         }
     }

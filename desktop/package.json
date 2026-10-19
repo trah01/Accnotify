@@ -1,0 +1,23 @@
+{
+  "name": "accnotify-desktop",
+  "productName": "Accnotify",
+  "version": "0.2.1",
+  "private": true,
+  "description": "Accnotify Windows 和 macOS 客户端",
+  "scripts": {
+    "start": "npm run sync-version && tauri dev",
+    "check": "npm run sync-version && cargo test --manifest-path src-tauri/Cargo.toml --lib",
+    "package:mac": "npm run sync-version && tauri build --bundles app,dmg",
+    "package:win": "npm run sync-version && tauri build --bundles nsis",
+    "sync-assets": "node scripts/sync-assets.mjs",
+    "prepare": "npm run sync-version && npm run sync-assets",
+    "sync-version": "node ../scripts/sync-version.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  },
+  "dependencies": {
+    "dompurify": "^3.4.17",
+    "marked": "^15.0.12"
+  }
+}
