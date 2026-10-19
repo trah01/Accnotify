@@ -10,7 +10,6 @@ import (
 	"github.com/accnotify/server/model"
 	"github.com/accnotify/server/storage"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type WebhookHandler struct {
@@ -32,6 +31,11 @@ func (h *WebhookHandler) HandleDingtalkWebhook(c *gin.Context)  { h.handleWebhoo
 func (h *WebhookHandler) HandleWecomWebhook(c *gin.Context)     { h.handleWebhook(c, "企业微信") }
 
 func (h *WebhookHandler) handleWebhook(c *gin.Context, provider string) {
+	push := NewPushHandler(h.storage, h.hub)
+	if c.Request.Method == http.MethodGet || strings.HasPrefix(c.ContentType(), "multipart/form-data") {
+		push.HandlePush(c)
+		return
+	}
 	deviceKey := c.Param("device_key")
 	device, err := h.storage.GetPushDevice(deviceKey)
 	if err != nil {
@@ -49,7 +53,11 @@ func (h *WebhookHandler) handleWebhook(c *gin.Context, provider string) {
 		return
 	}
 	if len(strings.TrimSpace(string(body))) == 0 {
-		c.JSON(400, model.PushResponse{Error: "Webhook body is empty"})
+		if len(c.Request.URL.Query()) > 0 {
+			push.sendPush(c, deviceKey, device, model.PushRequest{})
+		} else {
+			c.JSON(400, model.PushResponse{Error: "Webhook body is empty"})
+		}
 		return
 	}
 	if strings.HasPrefix(c.ContentType(), "application/x-www-form-urlencoded") {
@@ -61,6 +69,12 @@ func (h *WebhookHandler) handleWebhook(c *gin.Context, provider string) {
 		if payload := form.Get("payload"); payload != "" {
 			body = []byte(payload)
 		} else {
+			if provider == "" {
+				c.Request.Body = io.NopCloser(strings.NewReader(string(body)))
+				c.Request.ContentLength = int64(len(body))
+				push.HandlePush(c)
+				return
+			}
 			data := make(map[string]string)
 			for key := range form {
 				data[key] = form.Get(key)
@@ -98,6 +112,24 @@ func (h *WebhookHandler) handleWebhook(c *gin.Context, provider string) {
 	if provider == "" {
 		provider = detectWebhookProvider(c.Request.Header, data)
 	}
+	// Platform payload fields belong to that platform; only query parameters
+	// override the formatted notification. Generic Push payloads use Push parsing.
+	if provider == "" || data["encryption"] != nil || data["nonce"] != nil || data["ciphertext"] != nil {
+		direct := false
+		for _, key := range []string{"title", "body", "markdown", "id", "delete", "target", "group", "icon", "url", "image", "sound", "badge", "encryption", "nonce", "ciphertext", "encrypted_content"} {
+			if _, ok := data[key]; ok {
+				direct = true
+				break
+			}
+		}
+		if direct {
+			c.Request.Body = io.NopCloser(strings.NewReader(string(body)))
+			c.Request.ContentLength = int64(len(body))
+			c.Request.Header.Set("Content-Type", "application/json")
+			push.HandlePush(c)
+			return
+		}
+	}
 	message := formatWebhook(provider, event, data)
 	raw, _ := json.MarshalIndent(data, "", "  ")
 	if message.body == "" {
@@ -110,22 +142,7 @@ func (h *WebhookHandler) handleWebhook(c *gin.Context, provider string) {
 
 // sendWebhookMessage sends a webhook message to device
 func (h *WebhookHandler) sendWebhookMessage(deviceKey string, device *model.Device, title, body, image, targetURL string, c *gin.Context) {
-	messageID := uuid.New().String()
-
-	msg := &model.Message{
-		DeviceID:  device.ID,
-		MessageID: messageID,
-		Title:     title,
-		Body:      body,
-		Group:     "webhook",
-		URL:       targetURL,
-		Image:     image,
-	}
-
-	count, err := deliverToEndpoints(h.storage, h.hub, deviceKey, c.Query("target"), msg)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, model.PushResponse{Error: err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, model.PushResponse{Success: true, MessageID: messageID, TargetCount: count})
+	NewPushHandler(h.storage, h.hub).sendPush(c, deviceKey, device, model.PushRequest{
+		Title: title, Body: body, Group: "webhook", URL: targetURL, Image: image,
+	})
 }

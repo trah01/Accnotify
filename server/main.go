@@ -77,15 +77,15 @@ func main() {
 	// Webhook routes
 	webhookGroup := router.Group("/webhook/:device_key")
 	{
-		webhookGroup.POST("", webhookHandler.HandleGenericWebhook)
-		webhookGroup.POST("/github", webhookHandler.HandleGitHubWebhook)
-		webhookGroup.POST("/gitlab", webhookHandler.HandleGitLabWebhook)
-		webhookGroup.POST("/docker", webhookHandler.HandleDockerHubWebhook)
-		webhookGroup.POST("/gitea", webhookHandler.HandleGiteaWebhook)
-		webhookGroup.POST("/forgejo", webhookHandler.HandleForgejoWebhook)
-		webhookGroup.POST("/feishu", webhookHandler.HandleFeishuWebhook)
-		webhookGroup.POST("/dingtalk", webhookHandler.HandleDingtalkWebhook)
-		webhookGroup.POST("/wecom", webhookHandler.HandleWecomWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "", webhookHandler.HandleGenericWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "/github", webhookHandler.HandleGitHubWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "/gitlab", webhookHandler.HandleGitLabWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "/docker", webhookHandler.HandleDockerHubWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "/gitea", webhookHandler.HandleGiteaWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "/forgejo", webhookHandler.HandleForgejoWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "/feishu", webhookHandler.HandleFeishuWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "/dingtalk", webhookHandler.HandleDingtalkWebhook)
+		webhookGroup.Match([]string{"GET", "POST"}, "/wecom", webhookHandler.HandleWecomWebhook)
 	}
 
 	// Create server

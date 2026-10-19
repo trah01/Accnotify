@@ -32,8 +32,8 @@ npm run deploy
 | `GET/POST /push/设备ID` | JSON、表单、查询参数推送 |
 | `GET /push/设备ID/正文` | 简单推送 |
 | `GET /push/设备ID/标题/正文` | 带标题推送 |
-| `POST /webhook/设备ID` | JSON、表单、纯文本 Webhook |
-| `POST /webhook/设备ID/类型` | `github`、`gitlab`、`docker`、`gitea`、`forgejo`、`feishu`、`dingtalk`、`wecom` |
+| `GET/POST /webhook/设备ID` | Push 格式 JSON、表单、查询参数，或平台 JSON、纯文本 Webhook |
+| `GET/POST /webhook/设备ID/类型` | `github`、`gitlab`、`docker`、`gitea`、`forgejo`、`feishu`、`dingtalk`、`wecom`；GET 使用查询参数 |
 
 示例（将地址和设备 ID 替换为自己的值）：
 
@@ -44,6 +44,8 @@ curl -X POST 'https://YOUR_WORKER.workers.dev/push/YOUR_DEVICE_ID' \
 ```
 
 同一个字符串 `id` 可以更新通知；`{"id":"reminder-1","delete":1}` 删除通知。`markdown` 优先作为正文。每次发送有独立的 `message_id`、ACK 和递增的 `sequence`，操作通知的 `id` 在加密内容内。
+
+Webhook 的平台接入、消息参数和示例统一见[主 README](../README.md#接入平台通知)。
 
 手机保留 RSA-OAEP SHA-256 / MGF1 SHA-1 格式，电脑使用 SHA-256 / MGF1 SHA-256，消息内容均使用 AES-256-GCM。各设备独立保存公钥和待确认消息，某台设备的 ACK 不影响其他设备。已有发送端加密脚本可以继续使用 `encryption`、`nonce`、`ciphertext`；发送端密文原样转发，不与明文字段混用。
 

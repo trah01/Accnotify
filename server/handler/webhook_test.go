@@ -39,7 +39,7 @@ func TestWebhookKnownPlatforms(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	for path, handle := range map[string]gin.HandlerFunc{"": h.HandleGenericWebhook, "/github": h.HandleGitHubWebhook, "/gitlab": h.HandleGitLabWebhook, "/docker": h.HandleDockerHubWebhook, "/gitea": h.HandleGiteaWebhook, "/forgejo": h.HandleForgejoWebhook, "/feishu": h.HandleFeishuWebhook, "/dingtalk": h.HandleDingtalkWebhook, "/wecom": h.HandleWecomWebhook} {
-		router.POST("/webhook/:device_key"+path, handle)
+		router.Match([]string{"GET", "POST"}, "/webhook/:device_key"+path, handle)
 	}
 	for _, tc := range []struct{ name, path, header, event, payload, title, body, target, image string }{
 		{"github push", "/github", "X-GitHub-Event", "push", `{"ref":"refs/heads/main","repository":{"full_name":"team/project","html_url":"https://example.com/repo"},"commits":[{"id":"1234567890","message":"first change"},{"id":"abcdef0123","message":"second change"}],"pusher":{"name":"alice"},"compare":"https://example.com/compare"}`, "GitHub · 代码推送", "second change", "https://example.com/compare", ""},
@@ -97,6 +97,61 @@ func TestWebhookKnownPlatforms(t *testing.T) {
 				t.Fatal("encrypted notification lost parsed fields")
 			}
 		})
+	}
+
+	// Check the delivered fields, not just HTTP acceptance, for both entry modes.
+	for _, tc := range []struct {
+		method, path, contentType, body, id, expectedBody string
+		badge, status                                     int
+	}{
+		{"POST", "/forgejo?id=repo-status&group=work&markdown=updated&icon=icon&sound=bell&badge=3", "application/json", `{"id":123,"ref":"refs/heads/main","repository":{"full_name":"team/project"}}`, "repo-status", "updated", 3, 200},
+		{"POST", "?id=query-id&group=work&icon=icon&sound=bell&badge=3", "application/json", `{"id":"body-id","body":"updated"}`, "query-id", "updated", 3, 200},
+		{"POST", "", "application/x-www-form-urlencoded", "id=form-id&markdown=updated&group=work&icon=icon&sound=bell&badge=3", "form-id", "updated", 3, 200},
+		{"GET", "?id=get-id&body=updated&group=work&icon=icon&sound=bell&badge=3", "", "", "get-id", "updated", 3, 200},
+		{"POST", "/forgejo?id=repo-status&delete=1", "application/json", `{"repository":{"full_name":"team/project"}}`, "repo-status", "", 0, 200},
+		{"POST", "/forgejo?delete=1", "application/json", `{}`, "", "", 0, 400},
+		{"POST", "/forgejo?badge=wrong", "application/json", `{}`, "", "", 0, 400},
+		{"POST", "/forgejo?id=" + strings.Repeat("x", 257), "application/json", `{}`, "", "", 0, 400},
+	} {
+		r := httptest.NewRequest(tc.method, "/webhook/fixture-device"+tc.path, strings.NewReader(tc.body))
+		r.Header.Set("Content-Type", tc.contentType)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+		if w.Code != tc.status {
+			t.Fatalf("%s %s: %d %s", tc.method, tc.path, w.Code, w.Body.String())
+		}
+		if tc.status != 200 {
+			continue
+		}
+		var response model.PushResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatal(err)
+		}
+		pending, err := store.GetUndeliveredMessages(device.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, msg := range pending {
+			if msg.MessageID != response.MessageID {
+				continue
+			}
+			found = true
+			fields := decryptAdminTestMessage(t, string(msg.EncryptedPayload), key)
+			if fields["id"] != tc.id {
+				t.Fatalf("missing message id: %+v", fields)
+			}
+			if strings.Contains(tc.path, "delete=1") {
+				if fields["delete"] != "1" {
+					t.Fatalf("missing deletion: %+v", fields)
+				}
+			} else if fields["body"] != tc.expectedBody || fields["group"] != "work" || fields["icon"] != "icon" || fields["sound"] != "bell" || msg.Badge != tc.badge {
+				t.Fatalf("lost push fields: %+v / %+v", msg, fields)
+			}
+		}
+		if !found {
+			t.Fatal("accepted webhook was not queued")
+		}
 	}
 	for _, tc := range []struct {
 		path, body, contentType string

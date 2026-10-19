@@ -16,11 +16,29 @@ export async function parsePush(request, path) {
     } else if (type.includes("application/x-www-form-urlencoded")) req = Object.fromEntries(new URLSearchParams(text));
     else if (text.trim()) req = parseObject(text);
   }
+  if ((request.headers.get("content-type") || "").includes("form")) req = formPushFields(req);
   if (path.length) {
     req.title ||= path.length === 1 ? "Accnotify" : path[0];
     req.body ||= path.length === 1 ? path[0] : path.slice(1).join("/");
   }
-  for (const [key, value] of new URL(request.url).searchParams) if (value) req[key] = value;
+  return finishPush(request, req);
+}
+
+export function formPushFields(req) {
+  if (req.badge != null && req.badge !== "") {
+    if (!/^[+-]?\d+$/.test(req.badge)) throw new HttpError(400, "badge 必须为整数");
+    req.badge = Number(req.badge);
+  } else delete req.badge;
+  return req;
+}
+
+// Both entry points share query precedence, validation and encryption handling.
+export function finishPush(request, req) {
+  for (const [key, value] of new URL(request.url).searchParams) {
+    if (!value) continue;
+    if (key === "badge") req.badge = formPushFields({ badge: value }).badge;
+    else req[key] = value;
+  }
   return normalizePush(req);
 }
 

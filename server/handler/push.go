@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,6 +82,14 @@ func (h *PushHandler) HandlePush(c *gin.Context) {
 		req.URL = c.PostForm("url")
 		req.Image = c.PostForm("image")
 		req.Sound = c.PostForm("sound")
+		if v := c.PostForm("badge"); v != "" {
+			badge, err := strconv.Atoi(v)
+			if err != nil {
+				c.JSON(400, model.PushResponse{Error: "badge 必须为整数"})
+				return
+			}
+			req.Badge = badge
+		}
 		req.Encryption = c.PostForm("encryption")
 		req.Nonce = c.PostForm("nonce")
 		req.Ciphertext = c.PostForm("ciphertext")
@@ -100,6 +109,11 @@ func (h *PushHandler) HandlePush(c *gin.Context) {
 		req.Title = "Accnotify"
 	}
 
+	h.sendPush(c, deviceKey, device, req)
+}
+
+// sendPush applies shared overrides, validation, encryption and delivery.
+func (h *PushHandler) sendPush(c *gin.Context, deviceKey string, device *model.Device, req model.PushRequest) {
 	// Override with query parameters if present (Bark-compatible)
 	if v := c.Query("target"); v != "" {
 		req.Target = v
@@ -142,6 +156,15 @@ func (h *PushHandler) HandlePush(c *gin.Context) {
 	}
 	if v := c.Query("ciphertext"); v != "" {
 		req.Ciphertext = v
+	}
+
+	if v := c.Query("badge"); v != "" {
+		badge, err := strconv.Atoi(v)
+		if err != nil {
+			c.JSON(400, model.PushResponse{Error: "badge 必须为整数"})
+			return
+		}
+		req.Badge = badge
 	}
 
 	if len(req.ID) > 256 {

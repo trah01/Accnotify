@@ -74,9 +74,9 @@ export class PersonalDevice extends DurableObject {
       const payload = await parsePush(request, parts.slice(2));
       return this.push(parts[1], payload);
     }
-    if (parts[0] === "webhook" && parts[1] && parts.length <= 3 && request.method === "POST") {
+    if (parts[0] === "webhook" && parts[1] && parts.length <= 3 && ["GET", "POST"].includes(request.method)) {
       this.recipients(parts[1]);
-      return this.push(parts[1], { ...await parseWebhook(request, parts[2]), target: url.searchParams.get("target") || "all" });
+      return this.push(parts[1], await parseWebhook(request, parts[2]));
     }
     throw new HttpError(404, "接口不存在");
   }
