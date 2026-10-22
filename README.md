@@ -222,6 +222,8 @@ JSON、表单和链接都可以带 `target`，Webhook 也可以加 `?target=pc`�
 
 Go 版有 admin 后台，可以看推送统计、设备在线状态和实时日志，也能给指定设备或全部设备发消息、更新和删除消息。设备列表会显示手机/电脑、唯一标识和推送 ID 分组，支持搜索和分页。
 
+Go 服务端使用 Go 1.27.3 构建，Docker 构建镜像同步固定为该版本；本地编译需要 Go 1.27.3 或更高版本。
+
 后台默认不开，配置至少 12 个字符的 `ACCNOTIFY_ADMIN_PASSWORD` 后启用。默认用户名 `admin`，访问 `http://你的服务器:8081/admin/`；推送接口还是 8080。Docker 部署配置见 [Compose 示例](server/docker-compose.yml)，Cloudflare 版没有这个后台。
 
 ## 发送端加密
